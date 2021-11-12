@@ -1,9 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31515.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BQEV23K", "BQEV23K\BQEV23K.csproj", "{4555ED0F-A5DA-49F4-A41F-058C43A6D459}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2E527000-363D-4F91-9A8E-C8DD6B8BCABF} = {2E527000-363D-4F91-9A8E-C8DD6B8BCABF}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AxBQEV23K", "AxBQEV23K\AxBQEV23K.csproj", "{2E527000-363D-4F91-9A8E-C8DD6B8BCABF}"
 EndProject
@@ -31,5 +34,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C0F5C76F-75A2-4B7E-91CA-CE14A9F5320F}
 	EndGlobalSection
 EndGlobal

@@ -55,7 +55,7 @@ namespace BQEV23K
     /// </summary>
     public class EV23K : IDisposable
     {
-        private AxBQ80XRWLib.AxBq80xRW EV23KBoard;
+        private AxBQEV23K.MARK_5010 EV23KBoard;
         private const double CheckStatusPeriodeMilliseconds = 5000;
         private Timer timerCheckStatus;
         private bool isPresent = false;
@@ -104,8 +104,8 @@ namespace BQEV23K
         public EV23K(out System.Windows.Forms.Integration.WindowsFormsHost host)
         {
             host = new System.Windows.Forms.Integration.WindowsFormsHost();
-            EV23KBoard = new AxBQ80XRWLib.AxBq80xRW();
-            host.Child = EV23KBoard;
+            EV23KBoard = new AxBQEV23K.MARK_5010();
+            //host.Child = EV23KBoard;
 
             timerCheckStatus = new Timer(5000);
             timerCheckStatus.Elapsed += new ElapsedEventHandler(CheckStatus);

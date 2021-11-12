@@ -297,8 +297,8 @@ namespace BQEV23K
         public GaugeInfo(EV23K ev)
         {
             EV23KBoard = ev;
-            sbsItems = new SbsItems(@"4800_0_02-bq40z80.bqz");
-            bcfgItems = new BcfgItems(@"4800_0_02_03-bq40z80.bcfgx");
+            sbsItems = new SbsItems(@"Resources/4800_0_02-bq40z80.bqz");
+            bcfgItems = new BcfgItems(@"Resources/4800_0_02_03-bq40z80.bcfgx");
             cancelSource = new CancellationTokenSource();
             cancelToken = cancelSource.Token;
 
