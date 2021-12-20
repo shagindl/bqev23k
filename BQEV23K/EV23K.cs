@@ -61,7 +61,8 @@ namespace BQEV23K
         private bool isPresent = false;
         private string name = string.Empty;
         private string version = string.Empty;
-
+        private System.Threading.Mutex EV23KMutex = new System.Threading.Mutex();
+        
         #region Properties
         /// <summary>
         /// Get presents status of EV2300 hardware interface.
@@ -125,6 +126,7 @@ namespace BQEV23K
             isPresent = false;
             timerCheckStatus.Close();
             EV23KBoard.Dispose();
+            EV23KMutex.Dispose();
         }
 
         /// <summary>
@@ -239,7 +241,9 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
+                EV23KMutex.WaitOne();
                 EV23KError err = (EV23KError)EV23KBoard.ReadSMBusWord(SMBusCmd, ref nWord, targetAddr);
+                EV23KMutex.ReleaseMutex();
 
                 if (err != EV23KError.NoError)
                     return err;
@@ -249,6 +253,7 @@ namespace BQEV23K
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -266,10 +271,15 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                return (EV23KError)EV23KBoard.WriteSMBusCmd(SMBusCmd, (short)(targetAddr - 1));
+                EV23KMutex.WaitOne();
+                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusCmd(SMBusCmd, (short)(targetAddr - 1));
+                EV23KMutex.ReleaseMutex();
+
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -288,10 +298,15 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                return (EV23KError)EV23KBoard.WriteSMBusWord(SMBusCmd, SMBusWord, (short)(targetAddr-1));
+                EV23KMutex.WaitOne();
+                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusWord(SMBusCmd, SMBusWord, (short)(targetAddr - 1));
+                EV23KMutex.ReleaseMutex();
+
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -316,7 +331,9 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
+                EV23KMutex.WaitOne();
                 EV23KError err = (EV23KError)EV23KBoard.ReadSMBusBlock(SMBusCmd, ref data, ref len, targetAddr);
+                EV23KMutex.ReleaseMutex();
 
                 if (err != EV23KError.NoError)
                     return err;
@@ -328,6 +345,7 @@ namespace BQEV23K
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -347,10 +365,15 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                return (EV23KError)EV23KBoard.WriteSMBusBlock(SMBusCmd, DataBlock, BlockLength, (short)(targetAddr-1));
+                EV23KMutex.WaitOne();
+                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusBlock(SMBusCmd, DataBlock, BlockLength, (short)(targetAddr - 1));
+                EV23KMutex.ReleaseMutex();
+
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -376,6 +399,8 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
+                EV23KMutex.WaitOne();
+
                 byte[] cmd = { (byte)(Cmd & 0xFF), (byte)((Cmd & 0xFF00) >> 8) };
                 EV23KError err = (EV23KError)EV23KBoard.WriteSMBusBlock(MacAddr, cmd, (short)2, (short)(targetAddr-1));
 
@@ -383,6 +408,8 @@ namespace BQEV23K
                     return err;
 
                 err = (EV23KError)EV23KBoard.ReadSMBusBlock(MacAddr, ref data, ref len, targetAddr);
+
+                EV23KMutex.ReleaseMutex();
 
                 if (err != EV23KError.NoError)
                     return err;
@@ -394,6 +421,7 @@ namespace BQEV23K
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -420,6 +448,8 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
+                EV23KMutex.WaitOne();
+
                 byte[] cmd = { 0x00, 0x40 };
                 EV23KError err = (EV23KError)EV23KBoard.WriteSMBusBlock(MacAddr, cmd, (short)2, (short)(targetAddr - 1));
 
@@ -443,6 +473,8 @@ namespace BQEV23K
                         return err;
                 }
 
+                EV23KMutex.ReleaseMutex();
+
                 DataBlock = df.ToArray();
                 BlockLength = df.Count();
 
@@ -450,6 +482,7 @@ namespace BQEV23K
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }

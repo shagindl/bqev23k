@@ -36,12 +36,16 @@ namespace AxBQEV23K
         enum ADDR_MT2M5010
         {
             xMain_GlobalHdl_DevName = 10125,
-            RdWrSMBusBlock = 10201
+            RdWrSMBusBlock = 10200 + 1,
+            DataSMBusBlock = 10200 + 1 + 38 / 2,
+            WrSMBusWord = 10200 + 1 + 38 / 2 + 34 / 2,
+            RdSMBusWord = 10200 + 1 + 38 / 2 + 34 / 2 + 1,
         };
+        private Mutex DeviceMutex = new Mutex();
 
         public MARK_5010()
         {
-            modbusClient = new ModbusClient("10.10.10.10", 8000);
+            modbusClient = new ModbusClient("192.168.15.9", 8000);
             modbusClient.ConnectionTimeout = 10000;
             try
             {
@@ -61,6 +65,7 @@ namespace AxBQEV23K
         {
             modbusClient.Disconnect();
             Thread.Sleep(3000);
+            DeviceMutex.Dispose();
         }
 
         public virtual void AboutBox()
@@ -75,9 +80,13 @@ namespace AxBQEV23K
         public virtual void GetAllBoards(int nNumBrdsToGet, ref int nNumBrds, ref string listBrdNames) { }
         public virtual short GetEV2300Name(ref object nameDataBlock, ref short nLen)
         {
+            DeviceMutex.WaitOne();
+
             bEV2300Name = Encoding.ASCII.GetBytes(EV2300Name);
             nameDataBlock = bEV2300Name;
             nLen = (short)bEV2300Name.Length;
+
+            DeviceMutex.ReleaseMutex();
 
             return (short)EV23KError.NoError;
         }
@@ -90,6 +99,8 @@ namespace AxBQEV23K
         }
         public virtual void GetFreeBoards(int nNumBrdsToGet, ref int nNumBrds, ref string listBrdNames)
         {
+            DeviceMutex.WaitOne();
+
             nNumBrdsToGet = 1;
             nNumBrds = 1;
             try
@@ -102,6 +113,8 @@ namespace AxBQEV23K
                 nNumBrdsToGet = 0;
                 nNumBrds = 0;
             }
+
+            DeviceMutex.ReleaseMutex();
         }
         public virtual short GetPacket(int nLen, ref object vPkt, ref int nBytesPut) { return -1; }
         public virtual short GPIOMask(short nMask) { return (short)EV23KError.NoError; }
@@ -124,13 +137,30 @@ namespace AxBQEV23K
         //public virtual short ReadOneWire(global::BQ80XRWLib.OneWireType eType, short nOneWireCmd, ref short nWord) { return -1; }
         public virtual short ReadSMBusBlock(short nSmbCmd, ref object dataBlock, ref short nLen, short nTargetID)
         {
-            int[] data = modbusClient.ReadHoldingRegisters((int)ADDR_MT2M5010.RdWrSMBusBlock, 2);
-            nLen = Deserialized(data, ref dataBlock);
+            DeviceMutex.WaitOne();
+
+            int[] data = modbusClient.ReadHoldingRegisters((int)ADDR_MT2M5010.RdWrSMBusBlock, 1);
+            nLen = (short)data[0];
+            int Len = data[0] / 2 + (data[0] % 2);
+            data = modbusClient.ReadHoldingRegisters((int)ADDR_MT2M5010.DataSMBusBlock, Len);
+            Deserialized(data, ref dataBlock, nLen);
+
+            DeviceMutex.ReleaseMutex();
 
             return 0;
         }
         public virtual short ReadSMBusWord(short nSmbCmd, ref short nWord, short nTargetID) {
-            return -1;
+            byte[] null_dataBlock = { 0 };
+            WriteSMBusBlock(nSmbCmd, null_dataBlock, 0, nTargetID);
+
+            DeviceMutex.WaitOne();
+
+            int[] data = modbusClient.ReadHoldingRegisters((int)ADDR_MT2M5010.RdSMBusWord, 1);
+            nWord = (short)data[0];
+
+            DeviceMutex.ReleaseMutex();
+
+            return 0;
         }
         public virtual short ReadSrec(ref string filename, short nFileFormat, short nProtocol, int nPlatform) { return -1; }
         public virtual short SDQProgBlockCustom(object dataBlock, short nLen, short nPulseSetupFactor, short nPulseHoldFactor) { return -1; }
@@ -143,23 +173,38 @@ namespace AxBQEV23K
         public virtual short WriteReadI2CBlockOnSMB(short nSubCmd, short nWR_size, short nRD_size, ref object dataBlock, ref short nLen, short nTargetID) { return -1; }
         public virtual short WriteSMBusBlock(short nSmbCmd, object dataBlock, short len, short nTargetID)
         {
+            DeviceMutex.WaitOne();
+
+            //nTargetID = 0xB9;
             int[] regs = Serialized(nTargetID, nSmbCmd, len, dataBlock);
 
             modbusClient.WriteMultipleRegisters((int)ADDR_MT2M5010.RdWrSMBusBlock, regs);
 
+            DeviceMutex.ReleaseMutex();
+
             return 0;
         }
         public virtual short WriteSMBusCmd(short nSmbCmd, short nTargetID) { return -1; }
-        public virtual short WriteSMBusWord(short nSmbCmd, short nWord, short nTargetID) { return -1; }
+        public virtual short WriteSMBusWord(short nSmbCmd, short nWord, short nTargetID) {
+            DeviceMutex.WaitOne();
+
+            int[] regs = Serialized(nTargetID, nSmbCmd, 2, BitConverter.GetBytes(nWord));
+
+            modbusClient.WriteMultipleRegisters((int)ADDR_MT2M5010.WrSMBusWord, regs);
+
+            DeviceMutex.ReleaseMutex();
+
+            return 0; 
+        }
         protected void AttachInterfaces() { }
         protected void CreateSink() { }
         protected void DetachSink() { }
         protected int[] Serialized(short nTargetID, short nSmbCmd, short len, object dataBlock)
         {
             List<byte> data = new List<byte>();
+            data.AddRange(BitConverter.GetBytes(len));
             data.Add((byte)nTargetID);
             data.Add((byte)nSmbCmd);
-            data.Add((byte)len);
             data.AddRange((byte[])dataBlock);
 
             return Serialized(data);
@@ -177,18 +222,20 @@ namespace AxBQEV23K
 
             return regs;
         }
-        protected short Deserialized(int[] data, ref object dst)
+        protected short Deserialized(int[] data, ref object dst, int Len)
         {
             List<byte> data_byte = new List<byte>();
 
-            for (int i = 0; i < data.Length; i++)
+            for (int i = 0, size = Len; i < data.Length; i++, size--)
             {
                 data_byte.Add((byte)(data[i] >> 0));
+                if (--size == 0) break;
                 data_byte.Add((byte)(data[i] >> 8));
             }
             dst = data_byte.ToArray();
 
-            return (short)data_byte.Count();
+            return (short)Len;
         }
+
     }
 }

@@ -22,7 +22,7 @@ namespace BQEV23K
     /// </summary>
     public partial class MainWindow : Window, IDisposable
     {
-        private const int CmdExecDelayMilliseconds = 1000;
+        private const int CmdExecDelayMilliseconds = 15000;
         private const int ResetCmdExecDelayMilliseconds = 4000;
         private PlotViewModel plot;
         private EV23K board;
