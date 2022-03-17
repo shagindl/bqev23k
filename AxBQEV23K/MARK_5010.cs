@@ -39,13 +39,13 @@ namespace AxBQEV23K
             RdWrSMBusBlock = 10200 + 1,
             DataSMBusBlock = 10200 + 1 + 38 / 2,
             WrSMBusWord = 10200 + 1 + 38 / 2 + 34 / 2,
-            RdSMBusWord = 10200 + 1 + 38 / 2 + 34 / 2 + 1,
+            RdSMBusWord = 10200 + 1 + 38 / 2 + 34 / 2 + 3,
         };
         private Mutex DeviceMutex = new Mutex();
 
         public MARK_5010()
         {
-            modbusClient = new ModbusClient("192.168.15.9", 8000);
+            modbusClient = new ModbusClient("192.168.15.19", 8000);
             modbusClient.ConnectionTimeout = 10000;
             try
             {
