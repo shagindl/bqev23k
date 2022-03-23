@@ -45,7 +45,7 @@ namespace AxBQEV23K
 
         public MARK_5010()
         {
-            modbusClient = new ModbusClient("192.168.15.19", 8000);
+            modbusClient = new ModbusClient("192.168.14.19", 8000);
             modbusClient.ConnectionTimeout = 10000;
             try
             {
