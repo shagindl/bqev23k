@@ -297,8 +297,8 @@ namespace BQEV23K
         public GaugeInfo(EV23K ev)
         {
             EV23KBoard = ev;
-            sbsItems = new SbsItems(@"4800_0_02-bq40z80.bqz");
-            bcfgItems = new BcfgItems(@"4800_0_02_03-bq40z80.bcfgx");
+            sbsItems = new SbsItems(@"Resources/4800_0_02-bq40z80.bqz");
+            bcfgItems = new BcfgItems(@"Resources/4800_0_02_03-bq40z80.bcfgx");
             cancelSource = new CancellationTokenSource();
             cancelToken = cancelSource.Token;
 
@@ -601,9 +601,9 @@ namespace BQEV23K
         public void ToggleChargerRelay(bool state)
         {
             if(state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT);
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT1);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.VOUT);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT1);
         }
 
         /// <summary>
@@ -613,9 +613,9 @@ namespace BQEV23K
         public void ToggleLoadRelay(bool state)
         {
             if (state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.HDQ);
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT2);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.HDQ);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT2);
         }
 
         /// <summary>
@@ -624,9 +624,9 @@ namespace BQEV23K
         public async void RemoteLoadStartButton()
         {
             await Task.Delay(3000);
-            EV23KBoard.GpioHigh(EV23KGpioMask.I2CSDA);
+            EV23KBoard.GpioHigh(EV23KGpioMask.VOUT4);
             await Task.Delay(100);
-            EV23KBoard.GpioLow(EV23KGpioMask.I2CSDA);
+            EV23KBoard.GpioLow(EV23KGpioMask.VOUT4);
         }
     }
 }

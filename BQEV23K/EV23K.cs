@@ -47,7 +47,12 @@ namespace BQEV23K
         VOUT = 0x0010,      // Pin VOUT on HDQ header, push-pull
         HDQ = 0x0020,       // Pin HDQ on HDQ header, push-pull
         I2CSCL = 0x0040,    // I2C SCL pin, open collector
-        I2CSDA = 0x0080     // I2C SDA pin, open collector
+        I2CSDA = 0x0080,    // I2C SDA pin, open collector
+        // --
+        mskVOUTx = 0x0100,  // ...
+        VOUT1 = 0x0101,     // PORT1
+        VOUT2 = 0x0102,     // PORT2
+        VOUT4 = 0x0104,     // PORT3
     }
 
     /// <summary>
@@ -55,7 +60,8 @@ namespace BQEV23K
     /// </summary>
     public class EV23K : IDisposable
     {
-        private AxBQ80XRWLib.AxBq80xRW EV23KBoard;
+        //private AxBQ80XRWLib.AxBq80xRW EV23KBoard;
+        private AxBQEV23K.EV2400 EV23KBoard;
         private const double CheckStatusPeriodeMilliseconds = 5000;
         private Timer timerCheckStatus;
         private bool isPresent = false;
@@ -104,7 +110,7 @@ namespace BQEV23K
         public EV23K(out System.Windows.Forms.Integration.WindowsFormsHost host)
         {
             host = new System.Windows.Forms.Integration.WindowsFormsHost();
-            EV23KBoard = new AxBQ80XRWLib.AxBq80xRW();
+            EV23KBoard = new AxBQEV23K.EV2400();
             host.Child = EV23KBoard;
 
             timerCheckStatus = new Timer(5000);
@@ -190,10 +196,18 @@ namespace BQEV23K
                     err = (EV23KError)EV23KBoard.GetEV2300Version(ref ver, ref rev);
                     if(err == EV23KError.NoError)
                     {
-                        version = Encoding.ASCII.GetString(new byte[] { (byte)((ver & 0xff00) >> 8), 0x2E, (byte)(ver & 0x00ff), (byte)rev });
+                        var Version = new byte[] { (byte)((ver & 0xff00) >> 8), 0x2E, (byte)(ver & 0x00ff), (byte)rev };
+                        version = Encoding.ASCII.GetString(Version);
                     }
 
                     err = (EV23KError)EV23KBoard.GPIOWrite(0x7FF, 0);
+                    // -- Debug
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
                 }
                 return err;
             }
@@ -465,7 +479,7 @@ namespace BQEV23K
 
             return (EV23KError)EV23KBoard.CheckForError();
         }
-
+        EV23KGpioMask state_GPIO = EV23KGpioMask.mskVOUTx;
         /// <summary>
         /// Set EV2300 GPIO pin high.
         /// </summary>
@@ -475,6 +489,14 @@ namespace BQEV23K
         {
             if (!isPresent)
                 return EV23KError.NoUSB;
+            switch (gpio) {
+                case EV23KGpioMask.VOUT1:
+                case EV23KGpioMask.VOUT2:
+                case EV23KGpioMask.VOUT4:
+                    state_GPIO |= (gpio & ~EV23KGpioMask.mskVOUTx);
+                    var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
+                    return (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
+            }
 
             return (EV23KError)EV23KBoard.GPIOWrite((short)gpio, (short)gpio);
         }
@@ -488,6 +510,15 @@ namespace BQEV23K
         {
             if (!isPresent)
                 return EV23KError.NoUSB;
+            switch (gpio)
+            {
+                case EV23KGpioMask.VOUT1:
+                case EV23KGpioMask.VOUT2:
+                case EV23KGpioMask.VOUT4:
+                    state_GPIO &= ~(gpio & ~EV23KGpioMask.mskVOUTx);
+                    var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
+                    return (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);
+            }
 
             return (EV23KError)EV23KBoard.GPIOWrite((short)gpio, 0);
         }
@@ -501,6 +532,17 @@ namespace BQEV23K
         {
             if (!isPresent)
                 return EV23KError.NoUSB;
+
+            switch (gpio)
+            {
+                case EV23KGpioMask.VOUT1:
+                case EV23KGpioMask.VOUT2:
+                case EV23KGpioMask.VOUT4:
+                    var state = ((state_GPIO & gpio) == gpio) ? 0 : 1;
+                    state_GPIO = state == 1 ? (state_GPIO | gpio) : (state_GPIO & ~(gpio & ~EV23KGpioMask.mskVOUTx));
+                    var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
+                    return (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, (short)state);
+            }
 
             short data = 0;
             EV23KError err = (EV23KError)EV23KBoard.GPIORead((short)gpio, ref data);
