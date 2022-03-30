@@ -1145,7 +1145,7 @@
         <class>Settings</class>
         <subclass>Configuration</subclass>
         <caption>Cell Configuration</caption>
-        <offset>3267</offset>
+        <offset>3333</offset>
         <length>1</length>
         <datatype>B</datatype>
         <displaytype>hhhh</displaytype>
@@ -5224,7 +5224,7 @@
         <class>Advanced Charge Algorithm</class>
         <subclass>Termination Config</subclass>
         <caption>Charge Term Taper Current</caption>
-        <offset>3249</offset>
+        <offset>3315</offset>
         <length>2</length>
         <datatype>I</datatype>
         <displaytype>ddd</displaytype>
@@ -5464,7 +5464,7 @@
         <class>Gas Gauging</class>
         <subclass>Current Thresholds</subclass>
         <caption>Dsg Current Threshold</caption>
-        <offset>3278</offset>
+        <offset>3344</offset>
         <length>2</length>
         <datatype>I</datatype>
         <displaytype>ddd</displaytype>
@@ -5480,7 +5480,7 @@
         <class>Gas Gauging</class>
         <subclass>Current Thresholds</subclass>
         <caption>Chg Current Threshold</caption>
-        <offset>3280</offset>
+        <offset>3346</offset>
         <length>2</length>
         <datatype>I</datatype>
         <displaytype>ddd</displaytype>
@@ -5544,7 +5544,7 @@
         <class>Gas Gauging</class>
         <subclass>Design</subclass>
         <caption>Design Capacity mAh</caption>
-        <offset>2857</offset>
+        <offset>2921</offset>
         <length>2</length>
         <datatype>I</datatype>
         <displaytype>ddd</displaytype>
@@ -5576,7 +5576,7 @@
         <class>Gas Gauging</class>
         <subclass>Design</subclass>
         <caption>Design Voltage</caption>
-        <offset>2861</offset>
+        <offset>2925</offset>
         <length>2</length>
         <datatype>I</datatype>
         <displaytype>ddd</displaytype>
@@ -6819,7 +6819,7 @@
         <class>Gas Gauging</class>
         <subclass>IT Cfg</subclass>
         <caption>Term Voltage</caption>
-        <offset>2640</offset>
+        <offset>2641</offset>
         <length>2</length>
         <datatype>I</datatype>
         <displaytype>ddd</displaytype>

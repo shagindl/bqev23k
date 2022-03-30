@@ -228,6 +228,7 @@ namespace BQEV23K
         {
             get
             {
+                var item = bcfgItems.DataflashItems.Find(x => x.Caption == "Cell Configuration");
                 return bcfgItems.DataflashItems.Find(x => x.Caption == "Cell Configuration").RawValue.ToString();
             }
         }
@@ -297,8 +298,10 @@ namespace BQEV23K
         public GaugeInfo(EV23K ev)
         {
             EV23KBoard = ev;
-            sbsItems = new SbsItems(@"Resources/4800_0_02-bq40z80.bqz");
-            bcfgItems = new BcfgItems(@"Resources/4800_0_02_03-bq40z80.bcfgx");
+            sbsItems = new SbsItems(@"Resources/4800_0_04-bq40z80.bqz");
+            //bcfgItems = new BcfgItems(@"Resources/4800_0_04-bq40z80.bcfgx");
+            bcfgItems = new BcfgItems(@"Resources/4800_0_04-bq40z80.clipped.bcfgx");
+            
             cancelSource = new CancellationTokenSource();
             cancelToken = cancelSource.Token;
 
@@ -416,6 +419,10 @@ namespace BQEV23K
                         i.CalculateBitFields();
                         i.CalculateDisplayValue();
                     }
+                    else
+                    {
+
+                    }
                 }
                 else if (i.ReadStyle == 2)
                 {
@@ -428,6 +435,10 @@ namespace BQEV23K
                             i.CalculateBitFields();
                             i.CalculateDisplayValue();
                         }
+                        else
+                        {
+
+                        }
                     }
                     else
                     {
@@ -437,6 +448,10 @@ namespace BQEV23K
                             i.GetRawValueFromDataBlock(dataBlock, dataLength, i.OffsetWithinBlock, i.LengthWithinBlock);
                             i.CalculateBitFields();
                             i.CalculateDisplayValue();
+                        }
+                        else
+                        {
+
                         }
                     }
                 }
@@ -449,8 +464,18 @@ namespace BQEV23K
                         i.CalculateBitFields();
                         i.CalculateDisplayValue();
                     }
+                    else
+                    {
+
+                    }
                 }
             }
+
+            if (err != EV23KError.NoError)
+            {
+
+            }
+
             return err;
         }
 
@@ -613,9 +638,9 @@ namespace BQEV23K
         public void ToggleLoadRelay(bool state)
         {
             if (state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT2);
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT4);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.VOUT2);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT4);
         }
 
         /// <summary>
@@ -624,9 +649,9 @@ namespace BQEV23K
         public async void RemoteLoadStartButton()
         {
             await Task.Delay(3000);
-            EV23KBoard.GpioHigh(EV23KGpioMask.VOUT4);
+            EV23KBoard.GpioHigh(EV23KGpioMask.VOUT2);
             await Task.Delay(100);
-            EV23KBoard.GpioLow(EV23KGpioMask.VOUT4);
+            EV23KBoard.GpioLow(EV23KGpioMask.VOUT2);
         }
     }
 }

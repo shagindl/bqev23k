@@ -29,7 +29,9 @@ namespace BQEV23K
         IncorrectParameter = 7, // Invalid parameter type passed to function
         USBTimeoutError = 8,
         InvalidData = 9, // AssemblePacket could not build a valid packet
-        UnsolicitedPacket = 10
+        UnsolicitedPacket = 10,
+
+        ErrorForeTrie = 0x1000
     }
 
     /// <summary>
@@ -52,7 +54,8 @@ namespace BQEV23K
         mskVOUTx = 0x0100,  // ...
         VOUT1 = 0x0101,     // PORT1
         VOUT2 = 0x0102,     // PORT2
-        VOUT4 = 0x0104,     // PORT3
+        VOUT3 = 0x0103,     // PORT3
+        VOUT4 = 0x0104,     // PORT4
     }
 
     /// <summary>
@@ -67,6 +70,7 @@ namespace BQEV23K
         private bool isPresent = false;
         private string name = string.Empty;
         private string version = string.Empty;
+        private System.Threading.Mutex EV23KMutex = new System.Threading.Mutex();
 
         #region Properties
         /// <summary>
@@ -131,6 +135,7 @@ namespace BQEV23K
             isPresent = false;
             timerCheckStatus.Close();
             EV23KBoard.Dispose();
+            EV23KMutex.Dispose();
         }
 
         /// <summary>
@@ -204,10 +209,15 @@ namespace BQEV23K
                     // -- Debug
                     //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT1);
                     //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
-                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
-                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
-                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
-                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT1);
+                    
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT2);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT2);
+                    
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
+
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT4);
+                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT4);
                 }
                 return err;
             }
@@ -249,11 +259,21 @@ namespace BQEV23K
             {
                 SMBusWord = 0;
                 short nWord = 0;
+                int trie = 5;
+                EV23KError err = EV23KError.NoError;
 
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                EV23KError err = (EV23KError)EV23KBoard.ReadSMBusWord(SMBusCmd, ref nWord, targetAddr);
+                EV23KMutex.WaitOne();
+                while (trie != 0)
+                {
+                    err = (EV23KError)EV23KBoard.ReadSMBusWord(SMBusCmd, ref nWord, targetAddr);
+                    if ((err == EV23KError.SMBNAC || err == EV23KError.UnsolicitedPacket || err == EV23KError.USBTimeoutError) && --trie != 0)
+                        continue;
+                    else break;
+                }
+                EV23KMutex.ReleaseMutex();
 
                 if (err != EV23KError.NoError)
                     return err;
@@ -263,6 +283,7 @@ namespace BQEV23K
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -280,10 +301,15 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                return (EV23KError)EV23KBoard.WriteSMBusCmd(SMBusCmd, (short)(targetAddr - 1));
+                EV23KMutex.WaitOne();
+                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusCmd(SMBusCmd, (short)(targetAddr - 1));
+                EV23KMutex.ReleaseMutex();
+
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -302,10 +328,15 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                return (EV23KError)EV23KBoard.WriteSMBusWord(SMBusCmd, SMBusWord, (short)(targetAddr-1));
+                EV23KMutex.WaitOne();
+                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusWord(SMBusCmd, SMBusWord, (short)(targetAddr - 1));
+                EV23KMutex.ReleaseMutex();
+
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -326,11 +357,21 @@ namespace BQEV23K
                 BlockLength = 0;
                 short len = 0;
                 object data = null;
+                int trie = 5;
+                EV23KError err = EV23KError.NoError;
 
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                EV23KError err = (EV23KError)EV23KBoard.ReadSMBusBlock(SMBusCmd, ref data, ref len, targetAddr);
+                EV23KMutex.WaitOne();
+                while (trie != 0)
+                {
+                    err = (EV23KError)EV23KBoard.ReadSMBusBlock(SMBusCmd, ref data, ref len, targetAddr);
+                    if ((err == EV23KError.SMBNAC || err == EV23KError.UnsolicitedPacket || err == EV23KError.USBTimeoutError) && --trie != 0)
+                        continue;
+                    else break;
+                }
+                EV23KMutex.ReleaseMutex();
 
                 if (err != EV23KError.NoError)
                     return err;
@@ -342,6 +383,7 @@ namespace BQEV23K
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -361,13 +403,39 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                return (EV23KError)EV23KBoard.WriteSMBusBlock(SMBusCmd, DataBlock, BlockLength, (short)(targetAddr-1));
+                EV23KMutex.WaitOne();
+                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusBlock(SMBusCmd, DataBlock, BlockLength, (short)(targetAddr - 1));
+                EV23KMutex.ReleaseMutex();
+
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
+        //public static bool operator ==(EV23KError l, EV23KError r)
+        //{
+        //    EV23KError err = EV23KError.NoError, err_trie = EV23KError.NoError;
+
+        //    if (l == EV23KError.ErrorForeTrie)
+        //    {
+        //        err_trie = l;
+        //        err = r;
+        //    }
+        //    else if (r == EV23KError.ErrorForeTrie)
+        //    {
+        //        err_trie = r;
+        //        err = l;
+        //    }
+        //    if(err_trie == EV23KError.ErrorForeTrie)
+        //    {
+        //        return err == EV23KError.SMBNAC || err == EV23KError.UnsolicitedPacket;
+        //    }
+
+        //    return r == l;
+        //}
 
         /// <summary>
         /// Read manufacturer access block from device via SMBus on EV2300.
@@ -386,28 +454,42 @@ namespace BQEV23K
                 BlockLength = 0;
                 short len = 0;
                 object data = null;
+                int trie = 2*5;
+                EV23KError err = EV23KError.NoError;
 
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
-                byte[] cmd = { (byte)(Cmd & 0xFF), (byte)((Cmd & 0xFF00) >> 8) };
-                EV23KError err = (EV23KError)EV23KBoard.WriteSMBusBlock(MacAddr, cmd, (short)2, (short)(targetAddr-1));
+                EV23KMutex.WaitOne();
+                while (trie != 0)
+                {
+                    byte[] cmd = { (byte)(Cmd & 0xFF), (byte)((Cmd & 0xFF00) >> 8) };
+                    err = (EV23KError)EV23KBoard.WriteSMBusBlock(MacAddr, cmd, (short)2, (short)(targetAddr - 1));
 
-                if (err != EV23KError.NoError)
-                    return err;
+                    if ( (err == EV23KError.SMBNAC || err == EV23KError.UnsolicitedPacket || err == EV23KError.USBTimeoutError) && --trie != 0) 
+                        continue;
+                    if (err != EV23KError.NoError)
+                        goto __error;
 
-                err = (EV23KError)EV23KBoard.ReadSMBusBlock(MacAddr, ref data, ref len, targetAddr);
-
-                if (err != EV23KError.NoError)
-                    return err;
+                    err = (EV23KError)EV23KBoard.ReadSMBusBlock(MacAddr, ref data, ref len, targetAddr);
+                    if ((err == EV23KError.SMBNAC || err == EV23KError.UnsolicitedPacket || err == EV23KError.USBTimeoutError) && --trie != 0)
+                        continue;
+                    if (err != EV23KError.NoError) goto __error;
+                    else break;
+                }
+                EV23KMutex.ReleaseMutex();
 
                 DataBlock = data;
                 BlockLength = len;
 
                 return EV23KError.NoError;
+            __error:
+                EV23KMutex.ReleaseMutex();
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -434,36 +516,46 @@ namespace BQEV23K
                 if (!isPresent)
                     return EV23KError.NoUSB;
 
+                EV23KMutex.WaitOne();
+
                 byte[] cmd = { 0x00, 0x40 };
                 EV23KError err = (EV23KError)EV23KBoard.WriteSMBusBlock(MacAddr, cmd, (short)2, (short)(targetAddr - 1));
 
                 if (err != EV23KError.NoError)
-                    return err;
+                    goto __error;
 
                 err = (EV23KError)EV23KBoard.ReadSMBusBlock(MacAddr, ref data, ref datalen, targetAddr);
                 if (err == EV23KError.NoError)
-                    df = ((byte[])data).Skip(2); // Skip first two address bytes, copy only flash data
+                {
+                    df = ((byte[])data).Skip(2).Take(datalen - 2); // Skip first two address bytes, copy only flash data
+                }
 
-                for(int i = 1; i < 103; i++)
+                for (int i = 1; i < 105; i++)
                 {
                     data = null;
                     datalen = 0;
                     err = (EV23KError)EV23KBoard.ReadSMBusBlock(MacAddr, ref data, ref datalen, targetAddr);
                     if (err == EV23KError.NoError)
                     {
-                        df = df.Concat(((byte[])data).Skip(2)); // Skip frst two address bytes, concat only flash data
+                        df = df.Concat(((byte[])data).Skip(2).Take(datalen - 2)); // Skip frst two address bytes, concat only flash data
                     }
                     else
-                        return err;
+                        goto __error;
                 }
+
+                EV23KMutex.ReleaseMutex();
 
                 DataBlock = df.ToArray();
                 BlockLength = df.Count();
 
                 return EV23KError.NoError;
+            __error:
+                EV23KMutex.ReleaseMutex();
+                return err;
             }
             catch (Exception ex)
             {
+                EV23KMutex.ReleaseMutex();
                 throw new ArgumentException(ex.Message);
             }
         }
@@ -487,18 +579,26 @@ namespace BQEV23K
         /// <returns>EV2300 error code.</returns>
         public EV23KError GpioHigh(EV23KGpioMask gpio)
         {
+            EV23KError err = EV23KError.NoError;
+
             if (!isPresent)
                 return EV23KError.NoUSB;
+
+            EV23KMutex.WaitOne();
             switch (gpio) {
                 case EV23KGpioMask.VOUT1:
                 case EV23KGpioMask.VOUT2:
                 case EV23KGpioMask.VOUT4:
                     state_GPIO |= (gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
-                    return (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
+                    err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
+                    goto __exit;
             }
+            err = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, (short)gpio);
 
-            return (EV23KError)EV23KBoard.GPIOWrite((short)gpio, (short)gpio);
+        __exit:
+            EV23KMutex.ReleaseMutex();
+            return err;
         }
 
         /// <summary>
@@ -508,8 +608,12 @@ namespace BQEV23K
         /// <returns>EV2300 error code.</returns>
         public EV23KError GpioLow(EV23KGpioMask gpio)
         {
+            EV23KError err = EV23KError.NoError;
+
             if (!isPresent)
                 return EV23KError.NoUSB;
+
+            EV23KMutex.WaitOne();
             switch (gpio)
             {
                 case EV23KGpioMask.VOUT1:
@@ -517,10 +621,15 @@ namespace BQEV23K
                 case EV23KGpioMask.VOUT4:
                     state_GPIO &= ~(gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
-                    return (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);
+                    err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);
+                    goto __exit;
             }
 
-            return (EV23KError)EV23KBoard.GPIOWrite((short)gpio, 0);
+            err = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, 0);
+
+        __exit:
+            EV23KMutex.ReleaseMutex();
+            return err;
         }
 
         /// <summary>
@@ -530,9 +639,12 @@ namespace BQEV23K
         /// <returns>EV2300 error code.</returns>
         public EV23KError GpioToggle(EV23KGpioMask gpio)
         {
+            EV23KError err = EV23KError.NoError;
+
             if (!isPresent)
                 return EV23KError.NoUSB;
 
+            EV23KMutex.WaitOne();
             switch (gpio)
             {
                 case EV23KGpioMask.VOUT1:
@@ -541,17 +653,20 @@ namespace BQEV23K
                     var state = ((state_GPIO & gpio) == gpio) ? 0 : 1;
                     state_GPIO = state == 1 ? (state_GPIO | gpio) : (state_GPIO & ~(gpio & ~EV23KGpioMask.mskVOUTx));
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
-                    return (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, (short)state);
+                    err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, (short)state);
+                    goto __exit;
             }
 
             short data = 0;
-            EV23KError err = (EV23KError)EV23KBoard.GPIORead((short)gpio, ref data);
+            err = (EV23KError)EV23KBoard.GPIORead((short)gpio, ref data);
             if(err == EV23KError.NoError)
             {
                 data = (short)~data;
                 err = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, data);
             }
 
+        __exit:
+            EV23KMutex.ReleaseMutex();
             return err;
         }
     }
