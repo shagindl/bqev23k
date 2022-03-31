@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace BQEV23K
 {
@@ -60,7 +61,7 @@ namespace BQEV23K
             }
         }
 
-        public void WriteLine(GaugeInfo gauge)
+        public async void WriteLine(GaugeInfo gauge)
         {
             var item = DateTime.Now.ToString() + "," + "gauge," +
                             gauge.Voltage.ToString() + "," +
@@ -70,12 +71,18 @@ namespace BQEV23K
                             gauge.GetDisplayValue("Battery Status") + "," +
                             gauge.GetDisplayValue("Manufacturing Status") + "," +
                             gauge.GetDisplayValue("Operation Status A");
-            WriteLine(item);
+            await Task.Run(() =>
+            {
+                WriteLine(item);
+            });
         }
-        public void WriteMessage(object sender, LogWriteEventArgs e)
+        public async void WriteMessage(object sender, LogWriteEventArgs e)
         {
             var item = DateTime.Now.ToString() + "," + e.Message;
-            WriteLine(item);
+            await Task.Run(() =>
+            {
+                WriteLine(item);
+            });
         }
     }
 }

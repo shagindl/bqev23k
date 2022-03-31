@@ -1,0 +1,3 @@
+[submodule "MARK-5010"]
+	path = MARK-5010
+	url = https://dlsh_nn@bitbucket.org/vzor-dlsh/driver_m5010.git

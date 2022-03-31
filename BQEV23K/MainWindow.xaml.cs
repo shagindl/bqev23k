@@ -26,6 +26,7 @@ namespace BQEV23K
         private const int ResetCmdExecDelayMilliseconds = 4000;
         private PlotViewModel plot;
         private EV23K board;
+        private M5010.MARK_5010 mark5010;
         private GaugeInfo gauge;
         private DispatcherTimer timerUpdateGUI;
         private DispatcherTimer timerUpdatePlot;
@@ -44,7 +45,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.0 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.1 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
