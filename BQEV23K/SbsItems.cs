@@ -1427,7 +1427,7 @@ namespace BQEV23K
 
             if(unit.CompareTo("-") != 0)
             {
-                displayValue += " " + unit;
+                //displayValue += " " + unit;
             }
         }
 

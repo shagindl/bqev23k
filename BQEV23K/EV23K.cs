@@ -206,13 +206,16 @@ namespace BQEV23K
                     }
 
                     err = (EV23KError)EV23KBoard.GPIOWrite(0x7FF, 0);
+                    err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
+                    err = (EV23KError)GpioLow(EV23KGpioMask.VOUT2);
+                    err = (EV23KError)GpioLow(EV23KGpioMask.VOUT4);
                     // -- Debug
-                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT4);
                     //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
-                    
+
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT2);
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT2);
-                    
+
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
 
@@ -244,6 +247,12 @@ namespace BQEV23K
             {
                 throw new ArgumentException(ex.Message);
             }
+        }
+        public void DisableAll()
+        {
+            GpioLow(EV23KGpioMask.VOUT1);
+            GpioLow(EV23KGpioMask.VOUT2);
+            GpioLow(EV23KGpioMask.VOUT4);
         }
 
         /// <summary>

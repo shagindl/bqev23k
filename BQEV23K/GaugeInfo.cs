@@ -179,7 +179,14 @@ namespace BQEV23K
                 return sbsItems.SbsRegister.Find(x => x.Caption == "Battery Status").SbsBitItems.Find(x => x.SbsCaption == "FC").SbsBitValue != 0;
             }
         }
-        
+        public bool FlagFD
+        {
+            get
+            {
+                return sbsItems.SbsRegister.Find(x => x.Caption == "Battery Status").SbsBitItems.Find(x => x.SbsCaption == "FD").SbsBitValue != 0;
+            }
+        }
+
         /// <summary>
         /// Get status of GAUGE_EN flag.
         /// </summary>

@@ -120,6 +120,7 @@
                                 <local:LedControl x:Name="FlagREST" Height="24" IsChecked="False" Label="REST"/>
                                 <local:LedControl x:Name="FlagRDIS" Height="24" IsChecked="False" Label="RDIS"/>
                                 <local:LedControl x:Name="FlagFC" Height="24" IsChecked="False" Label="FC"/>
+                                <local:LedControl x:Name="FlagFD" Height="24" IsChecked="False" Label="FD"/>
                                 <local:LedControl x:Name="FlagOCVFR" Height="24" IsChecked="False" Label="OCVFR"/>
                                 <local:LedControl x:Name="FlagQMAX" Height="24" IsChecked="False" Label="QMAX"/>
                                 <local:LedControl x:Name="FlagQEN" Height="24" IsChecked="False" Label="QEN"/>

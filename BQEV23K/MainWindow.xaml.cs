@@ -33,6 +33,7 @@ namespace BQEV23K
         private CycleType selectedCycleType = CycleType.None;
         private CycleModeType selectedCycleModeType = CycleModeType.None;
         private GpcDataLog gpcLog;
+        private DataLog_t DataLog;
 
         /// <summary>
         /// Constructor.
@@ -43,7 +44,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = "BQEV2300 - v1.0 by Mictronics";
+            Title = @"BQEV2400 - v2.0.0 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -101,7 +102,10 @@ namespace BQEV23K
         /// <param name="e">Not used.</param>
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if(cycle != null)
+            // -- Disable All
+            board.DisableAll();
+
+            if (cycle != null)
                 cycle.CancelCycle();
 
             if(gauge != null)
@@ -179,6 +183,7 @@ namespace BQEV23K
                     LabelGaugeTemperature.Content = gauge.GetDisplayValue("Temperature");
 
                     FlagFC.IsChecked = gauge.FlagFC;
+                    FlagFD.IsChecked = gauge.FlagFD;
                     FlagGAUGE_EN.IsChecked = gauge.FlagGAUGE_EN;
                     FlagQEN.IsChecked = gauge.FlagQEN;
                     FlagQMAX.IsChecked = gauge.FlagQMAX;
@@ -234,6 +239,10 @@ namespace BQEV23K
             if(selectedCycleType == CycleType.GpcCycle && gpcLog != null)
             {
                 gpcLog.WriteLine(gauge.Voltage, gauge.Current, gauge.Temperature);
+            }
+            if(DataLog != null)
+            {
+                DataLog.WriteLine(gauge);
             }
         }
 
@@ -365,13 +374,14 @@ namespace BQEV23K
             int relaxTimeCharge = 0;
             int relaxTimeDischarge = 0;
 
-            if (int.TryParse(CfgCycleChargeRelaxHours.Text, out relaxTimeCharge))
-                relaxTimeCharge *= 60; // Convert to minute
+            float val;
+            if (float.TryParse(CfgCycleChargeRelaxHours.Text, out val))
+                relaxTimeCharge = (int)val * 60; // Convert to minute
             else
                 relaxTimeCharge = 120;
 
-            if (int.TryParse(CfgCycleDischargeRelaxHours.Text, out relaxTimeDischarge))
-                relaxTimeDischarge *= 60; // Conver to minutes
+            if (float.TryParse(CfgCycleDischargeRelaxHours.Text, out val))
+                relaxTimeDischarge = (int)val * 60; // Conver to minutes
             else
                 relaxTimeDischarge = 300;
 
@@ -413,10 +423,12 @@ namespace BQEV23K
 
                 gpcLog = new GpcDataLog(cellCount);
             }
+            DataLog = new DataLog_t();
 
             cycle = new Cycle(tl, gauge);
             cycle.CycleModeType = selectedCycleModeType;
             cycle.LogWriteEvent += LogView.AddEntry;
+            cycle.LogWriteEvent += DataLog.WriteMessage;
             cycle.CycleCompleted += OnCycleCompleted;
             cycle.StartCycle();
 
