@@ -26,7 +26,8 @@ namespace BQEV23K
         private const int ResetCmdExecDelayMilliseconds = 4000;
         private PlotViewModel plot;
         private EV23K board;
-        private M5010.MARK_5010 mark5010;
+        private M5010.MARK_5010 Mark5010;
+        private DispatcherTimer timerConnectionM5010;
         private GaugeInfo gauge;
         private DispatcherTimer timerUpdateGUI;
         private DispatcherTimer timerUpdatePlot;
@@ -45,12 +46,20 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.1 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.2 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
             host.IsEnabled = false;
             MainGrid.Children.Add(host);
+
+            Mark5010 = new M5010.MARK_5010();
+            // -- Connection
+            timerConnectionM5010 = new DispatcherTimer();
+            timerConnectionM5010.Tick += new EventHandler(TaskConnectionM5010);
+            timerConnectionM5010.Interval = new TimeSpan(0, 0, 0, 5, 0);
+            timerConnectionM5010.Start();
+
             timerUpdateGUI = new DispatcherTimer();
             timerUpdateGUI.Tick += new EventHandler(UpdateGui);
             timerUpdateGUI.Interval = new TimeSpan(0, 0, 0, 0, 500);
@@ -229,21 +238,25 @@ namespace BQEV23K
         /// <param name="e">Not used.</param>
         public void UpdatePlot(object sender, System.EventArgs e)
         {
-            lock (plot.Plot1.SyncRoot)
-            {
-                plot.Voltage = gauge.Voltage;
-                plot.Current = gauge.Current;
-                plot.Temperature = gauge.Temperature;
-            }
-            plot.Plot1.InvalidatePlot(true); // Refresh plot view
+            plot.Output(gauge.Voltage, gauge.Current, gauge.Temperature);
+            //lock (plot.Plot1.SyncRoot)
+            //{
+            //    plot.Voltage = gauge.Voltage;
+            //    plot.Current = gauge.Current;
+            //    plot.Temperature = gauge.Temperature;
+            //}
+            //plot.Plot1.InvalidatePlot(true); // Refresh plot view
 
-            if(selectedCycleType == CycleType.GpcCycle && gpcLog != null)
+            if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
             {
                 gpcLog.WriteLine(gauge.Voltage, gauge.Current, gauge.Temperature);
             }
             if(DataLog != null)
             {
-                DataLog.WriteLine(gauge);
+                this.Dispatcher.Invoke(new Action(() =>
+                {
+                    DataLog.WriteLine(gauge);
+                }));
             }
         }
 
@@ -538,6 +551,24 @@ namespace BQEV23K
         private void ButtonResetZoom_Click(object sender, RoutedEventArgs e)
         {
             PlotView.ResetAllAxes();
+        }
+        bool StateConnceted = false;
+        private void TaskConnectionM5010(object sender, System.EventArgs e)
+        {
+            var IP = Mark5010.IP + @" : " + Mark5010.port.ToString();
+            var label = @"Disconect: IP = " + IP;
+
+            var Connceted = Mark5010.UpdateConnection();
+            if (StateConnceted != Connceted)
+            {
+                if(Connceted)
+                    label = @"Connected: IP = " + IP;
+                else
+                    label = @"Disconect: IP = " + IP;
+
+                StateConnceted = Connceted;
+                LogView.AddEntry(label);
+            }
         }
     }
 }

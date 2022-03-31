@@ -51,6 +51,7 @@ namespace BQEV23K
         I2CSCL = 0x0040,    // I2C SCL pin, open collector
         I2CSDA = 0x0080,    // I2C SDA pin, open collector
         // --
+        VOUTunknow = 0x010F,  // ...
         mskVOUTx = 0x0100,  // ...
         VOUT1 = 0x0101,     // PORT1
         VOUT2 = 0x0102,     // PORT2
@@ -580,7 +581,7 @@ namespace BQEV23K
 
             return (EV23KError)EV23KBoard.CheckForError();
         }
-        EV23KGpioMask state_GPIO = EV23KGpioMask.mskVOUTx;
+        EV23KGpioMask state_GPIO = EV23KGpioMask.VOUTunknow;
         /// <summary>
         /// Set EV2300 GPIO pin high.
         /// </summary>
@@ -598,6 +599,13 @@ namespace BQEV23K
                 case EV23KGpioMask.VOUT1:
                 case EV23KGpioMask.VOUT2:
                 case EV23KGpioMask.VOUT4:
+                    if (state_GPIO != EV23KGpioMask.VOUTunknow)
+                    {
+                        var state = ((state_GPIO & gpio) == gpio) ? true : false;
+                        if (state)
+                            goto __exit;
+                    }
+
                     state_GPIO |= (gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
                     err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
@@ -628,6 +636,13 @@ namespace BQEV23K
                 case EV23KGpioMask.VOUT1:
                 case EV23KGpioMask.VOUT2:
                 case EV23KGpioMask.VOUT4:
+                    if (state_GPIO != EV23KGpioMask.VOUTunknow)
+                    {
+                        var state = ((state_GPIO & gpio) == gpio) ? true : false;
+                        if (!state)
+                            goto __exit;
+                    }
+
                     state_GPIO &= ~(gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
                     err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);

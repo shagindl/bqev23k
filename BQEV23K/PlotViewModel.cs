@@ -5,6 +5,7 @@ using System.ComponentModel;
 using OxyPlot.Axes;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BQEV23K
 {
@@ -177,6 +178,20 @@ namespace BQEV23K
         protected void RaisePropertyChanged(string property)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
+        }
+        public async void Output(int _Voltage, int _Current, double _Temperature)
+        {
+            await Task.Run(() =>
+            {
+                lock (Plot1.SyncRoot)
+                {
+                    Voltage = _Voltage;
+                    Current = _Current;
+                    Temperature = _Temperature;
+                }
+
+                Plot1.InvalidatePlot(true); // Refresh plot view
+            });
         }
     }
 }

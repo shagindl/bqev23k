@@ -2,16 +2,18 @@
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace BQEV23K
 {
     /// <summary>
     /// This class creates a new data log for GPC cycle.
     /// </summary>
-    public class DataLog_t
+    public class DataLog_t : IDisposable
     {
         private DateTime startTime;
         private string NameFile;
+        private System.Threading.Mutex Mutex = new System.Threading.Mutex();
 
         /// <summary>
         /// Constructor
@@ -41,27 +43,42 @@ namespace BQEV23K
                 Console.WriteLine(ex.Message);
             }
         }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            Mutex.Dispose();
+        }
 
         /// <summary>
         /// Write new data line to log file.
         /// </summary>
         /// 
-        public void WriteLine(string item)
+        public async void WriteLine(string item)
         {
-            try
+            await Task.Run(() =>
             {
-                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(@"Logs\" + NameFile, true, System.Text.Encoding.UTF8))
+                try
                 {
-                    writer.WriteLine(item);
+                    Mutex.WaitOne();
+                    using (System.IO.StreamWriter writer = new System.IO.StreamWriter(@"Logs\" + NameFile, true, System.Text.Encoding.UTF8))
+                    {
+                        writer.WriteLine(item);
+                    }
+                    Mutex.ReleaseMutex();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+                catch (Exception ex)
+                {
+                    Mutex.ReleaseMutex();
+                    Console.WriteLine(ex.Message);
+                }
+            });
         }
 
-        public async void WriteLine(GaugeInfo gauge)
+        public void WriteLine(GaugeInfo gauge)
         {
             var item = DateTime.Now.ToString() + "," + "gauge," +
                             gauge.Voltage.ToString() + "," +
@@ -71,18 +88,20 @@ namespace BQEV23K
                             gauge.GetDisplayValue("Battery Status") + "," +
                             gauge.GetDisplayValue("Manufacturing Status") + "," +
                             gauge.GetDisplayValue("Operation Status A");
-            await Task.Run(() =>
-            {
-                WriteLine(item);
-            });
+            WriteLine(item);
         }
-        public async void WriteMessage(object sender, LogWriteEventArgs e)
+        //public async void WriteMessage(object sender, LogWriteEventArgs e)
+        //{
+        //    var item = DateTime.Now.ToString() + "," + e.Message;
+        //    await Task.Run(() =>
+        //    {
+        //        WriteLine(item);
+        //    });
+        //}
+        public void WriteMessage(object sender, LogWriteEventArgs e)
         {
             var item = DateTime.Now.ToString() + "," + e.Message;
-            await Task.Run(() =>
-            {
-                WriteLine(item);
-            });
+            WriteLine(item);
         }
     }
 }
