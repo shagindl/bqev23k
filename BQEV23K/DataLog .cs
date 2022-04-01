@@ -104,8 +104,11 @@ namespace BQEV23K
         //}
         public void WriteMessage(object sender, LogWriteEventArgs e)
         {
-            var item = DateTime.Now.ToString() + "," + e.Message;
-            WriteLine(item);
+            WriteLine($"{DateTime.Now},info: {e.Message}");
+        }
+        public void WriteMessage(string mess)
+        {
+            WriteLine($"{DateTime.Now},info: {mess}");
         }
     }
 }

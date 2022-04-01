@@ -22,16 +22,16 @@ namespace BQEV23K
     /// </summary>
     public partial class MainWindow : Window, IDisposable
     {
-        private const int CmdExecDelayMilliseconds = 1000;
+        private const int CmdExecDelayMilliseconds = 2000;
         private const int ResetCmdExecDelayMilliseconds = 4000;
         private PlotViewModel plot;
         private EV23K board;
         private M5010.MARK_5010 Mark5010;
-        private DispatcherTimer timerConnectionM5010;
+        private System.Timers.Timer timerConnectionM5010;
         private GaugeInfo gauge;
         private DispatcherTimer timerUpdateGUI;
-        private DispatcherTimer timerUpdatePlot;
-        private DispatcherTimer timerDataLog;
+        private System.Timers.Timer timerUpdatePlot;
+        private System.Timers.Timer timerDataLog;
         private Cycle cycle;
         private CycleType selectedCycleType = CycleType.None;
         private CycleModeType selectedCycleModeType = CycleModeType.None;
@@ -47,7 +47,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.3 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.4 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -56,9 +56,8 @@ namespace BQEV23K
 
             Mark5010 = new M5010.MARK_5010();
             // -- Connection
-            timerConnectionM5010 = new DispatcherTimer();
-            timerConnectionM5010.Tick += new EventHandler(TaskConnectionM5010);
-            timerConnectionM5010.Interval = new TimeSpan(0, 0, 0, 5, 0);
+            timerConnectionM5010 = new System.Timers.Timer(5000);
+            timerConnectionM5010.Elapsed += new System.Timers.ElapsedEventHandler(TaskConnectionM5010);
             timerConnectionM5010.Start();
 
             timerUpdateGUI = new DispatcherTimer();
@@ -66,13 +65,11 @@ namespace BQEV23K
             timerUpdateGUI.Interval = new TimeSpan(0, 0, 0, 0, 500);
             timerUpdateGUI.Start();
 
-            timerUpdatePlot = new DispatcherTimer();
-            timerUpdatePlot.Tick += new EventHandler(UpdatePlot);
-            timerUpdatePlot.Interval = new TimeSpan(0, 0, 0, 5, 0);
+            timerUpdatePlot = new System.Timers.Timer(5000);
+            timerUpdatePlot.Elapsed += new System.Timers.ElapsedEventHandler(UpdatePlot);
 
-            timerDataLog = new DispatcherTimer();
-            timerDataLog.Tick += new EventHandler(UpdateDataLog);
-            timerDataLog.Interval = new TimeSpan(0, 0, 0, 1, 0);
+            timerDataLog = new System.Timers.Timer(1000);
+            timerDataLog.Elapsed += new System.Timers.ElapsedEventHandler(UpdateDataLog);
         }
 
         /// <summary>
@@ -148,6 +145,10 @@ namespace BQEV23K
 
         protected virtual void Dispose(bool disposing)
         {
+            timerConnectionM5010.Dispose();
+            timerDataLog.Dispose();
+            timerUpdatePlot.Dispose();
+
             if (gauge != null)
             {
                 gauge.ReadDeviceMutex.WaitOne();
@@ -293,6 +294,12 @@ namespace BQEV23K
         {
             int cellCount = 0;
             int.TryParse(CfgCycleCellCount.Text, out cellCount);
+
+            DataLog = new DataLog_t();
+            gauge.LogWriteEvent += DataLog.WriteMessage;
+            LogView.LogWriteEvent += DataLog.WriteMessage;
+            board.LogWriteEvent += DataLog.WriteMessage;
+            Mark5010.LogWriteEvent += DataLog.WriteMessage;
 
             if (cellCount <= 0 || cellCount > 7)
             {
@@ -452,12 +459,10 @@ namespace BQEV23K
 
                 gpcLog = new GpcDataLog(cellCount);
             }
-            DataLog = new DataLog_t();
 
             cycle = new Cycle(tl, gauge, Mark5010);
             cycle.CycleModeType = selectedCycleModeType;
             cycle.LogWriteEvent += LogView.AddEntry;
-            cycle.LogWriteEvent += DataLog.WriteMessage;
             cycle.CycleCompleted += OnCycleCompleted;
             cycle.StartCycle();
 

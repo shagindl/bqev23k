@@ -42,6 +42,9 @@ namespace BQEV23K
         private bool isDataflashAvail = false;
         private Mutex readDeviceMutex = new Mutex();
 
+        public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
+        public event LogWriteDelegate LogWriteEvent;
+
         #region Properties
         /// <summary>
         /// Get battery voltage.
@@ -554,6 +557,8 @@ namespace BQEV23K
                     }
                 }
             }
+            LogWrite($"cmd = {caption} err = {err}");
+
             return err;
         }
 
@@ -579,6 +584,10 @@ namespace BQEV23K
                 }
             }
             return;
+        }
+        private void LogWrite(string log)
+        {
+            LogWriteEvent?.Invoke(this, new LogWriteEventArgs(log));
         }
 
         /// <summary>
@@ -671,7 +680,7 @@ namespace BQEV23K
         /// <param name="state">Logical ouput state.</param>
         public void ToggleChargerRelay(bool state)
         {
-            if(state)
+            if (state)
                 EV23KBoard.GpioHigh(EV23KGpioMask.VOUT1);
             else
                 EV23KBoard.GpioLow(EV23KGpioMask.VOUT1);

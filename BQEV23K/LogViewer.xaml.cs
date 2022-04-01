@@ -17,6 +17,9 @@ namespace BQEV23K
         public ObservableCollection<LogEntry> LogEntries { get; set; }
         private int index = 0;
 
+        public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
+        public event LogWriteDelegate LogWriteEvent;
+
         public LogViewer()
         {
             InitializeComponent();
@@ -51,6 +54,8 @@ namespace BQEV23K
 
         public void AddEntry(string log)
         {
+            LogWrite(log);
+
             Application.Current.Dispatcher.BeginInvoke((Action)(() => LogEntries.Add(new LogEntry()
             {
                 Index = index++,
@@ -62,6 +67,10 @@ namespace BQEV23K
         public void AddEntry(object sender, LogWriteEventArgs e)
         {
             AddEntry(e.Message);
+        }
+        private void LogWrite(string log)
+        {
+            LogWriteEvent?.Invoke(this, new LogWriteEventArgs(log));
         }
     }
 

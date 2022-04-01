@@ -31,7 +31,8 @@ namespace BQEV23K
         InvalidData = 9, // AssemblePacket could not build a valid packet
         UnsolicitedPacket = 10,
 
-        ErrorForeTrie = 0x1000
+        ErrorForeTrie = 0x1000,
+        Unknow = -1,
     }
 
     /// <summary>
@@ -72,6 +73,9 @@ namespace BQEV23K
         private string name = string.Empty;
         private string version = string.Empty;
         private System.Threading.Mutex EV23KMutex = new System.Threading.Mutex();
+
+        public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
+        public event LogWriteDelegate LogWriteEvent;
 
         #region Properties
         /// <summary>
@@ -137,6 +141,11 @@ namespace BQEV23K
             timerCheckStatus.Close();
             EV23KBoard.Dispose();
             EV23KMutex.Dispose();
+        }
+
+        private void LogWrite(string log)
+        {
+            LogWriteEvent?.Invoke(this, new LogWriteEventArgs(log));
         }
 
         /// <summary>
@@ -428,27 +437,6 @@ namespace BQEV23K
                 throw new ArgumentException(ex.Message);
             }
         }
-        //public static bool operator ==(EV23KError l, EV23KError r)
-        //{
-        //    EV23KError err = EV23KError.NoError, err_trie = EV23KError.NoError;
-
-        //    if (l == EV23KError.ErrorForeTrie)
-        //    {
-        //        err_trie = l;
-        //        err = r;
-        //    }
-        //    else if (r == EV23KError.ErrorForeTrie)
-        //    {
-        //        err_trie = r;
-        //        err = l;
-        //    }
-        //    if(err_trie == EV23KError.ErrorForeTrie)
-        //    {
-        //        return err == EV23KError.SMBNAC || err == EV23KError.UnsolicitedPacket;
-        //    }
-
-        //    return r == l;
-        //}
 
         /// <summary>
         /// Read manufacturer access block from device via SMBus on EV2300.
@@ -592,7 +580,7 @@ namespace BQEV23K
         /// <returns>EV2300 error code.</returns>
         public EV23KError GpioHigh(EV23KGpioMask gpio)
         {
-            EV23KError err = EV23KError.NoError;
+            EV23KError err = EV23KError.NoError, err2log = EV23KError.Unknow;
 
             if (!isPresent)
                 return EV23KError.NoUSB;
@@ -613,13 +601,15 @@ namespace BQEV23K
 
                     state_GPIO |= (gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
-                    err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
+                    err = err2log  = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
                     goto __exit;
             }
-            err = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, (short)gpio);
+            err = err2log = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, (short)gpio);
 
         __exit:
             EV23KMutex.ReleaseMutex();
+            if (err2log != EV23KError.Unknow) LogWrite($"GpioLow {gpio} err = {err}");
+
             return err;
         }
 
@@ -630,7 +620,7 @@ namespace BQEV23K
         /// <returns>EV2300 error code.</returns>
         public EV23KError GpioLow(EV23KGpioMask gpio)
         {
-            EV23KError err = EV23KError.NoError;
+            EV23KError err = EV23KError.NoError, err2log = EV23KError.Unknow;
 
             if (!isPresent)
                 return EV23KError.NoUSB;
@@ -652,14 +642,15 @@ namespace BQEV23K
 
                     state_GPIO &= ~(gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
-                    err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);
+                    err = err2log = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);
                     goto __exit;
             }
 
-            err = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, 0);
+            err = err2log = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, 0);
 
         __exit:
             EV23KMutex.ReleaseMutex();
+            if(err2log != EV23KError.Unknow) LogWrite($"GpioLow {gpio} err = {err}");
             return err;
         }
 
@@ -670,7 +661,8 @@ namespace BQEV23K
         /// <returns>EV2300 error code.</returns>
         public EV23KError GpioToggle(EV23KGpioMask gpio)
         {
-            EV23KError err = EV23KError.NoError;
+            EV23KError err = EV23KError.NoError, err2log = EV23KError.Unknow;
+            int state = -1;
 
             if (!isPresent)
                 return EV23KError.NoUSB;
@@ -681,10 +673,11 @@ namespace BQEV23K
                 case EV23KGpioMask.VOUT1:
                 case EV23KGpioMask.VOUT2:
                 case EV23KGpioMask.VOUT4:
-                    var state = ((state_GPIO & gpio) == gpio) ? 0 : 1;
+                    state = ((state_GPIO & gpio) == gpio) ? 0 : 1;
                     state_GPIO = state == 1 ? (state_GPIO | gpio) : (state_GPIO & ~(gpio & ~EV23KGpioMask.mskVOUTx));
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
-                    err = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, (short)state);
+                    err = err2log = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, (short)state);
+
                     goto __exit;
             }
 
@@ -693,11 +686,14 @@ namespace BQEV23K
             if(err == EV23KError.NoError)
             {
                 data = (short)~data;
-                err = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, data);
+                err = err2log =(EV23KError)EV23KBoard.GPIOWrite((short)gpio, data);
             }
+            state = data;
 
         __exit:
             EV23KMutex.ReleaseMutex();
+            if (err2log != EV23KError.Unknow) LogWrite($"GpioLow {gpio} err = {err}");
+
             return err;
         }
     }
