@@ -53,6 +53,7 @@ namespace BQEV23K
         private int currentTask;
         private bool processStatus;
         private GaugeInfo gauge;
+        private M5010.MARK_5010 m5010;
         private TimeSpan elapsedTime;
         private Type taskType;
         private CycleModeType cycleModeType;
@@ -125,12 +126,13 @@ namespace BQEV23K
         /// </summary>
         /// <param name="_taskList">Task list to be cycled through.</param>
         /// <param name="_gauge">Gauge class object.</param>
-        public Cycle(List<GenericTask> _taskList, GaugeInfo _gauge)
+        public Cycle(List<GenericTask> _taskList, GaugeInfo _gauge, M5010.MARK_5010 _m5010)
         {
             taskList = _taskList;
             gauge = _gauge;
             gauge.ToggleChargerRelay(false);
             gauge.ToggleLoadRelay(false);
+            m5010 = _m5010;
             pushLoadStartButton = true;
         }
 
@@ -307,7 +309,9 @@ namespace BQEV23K
                     }
                     else if (taskType.Name == "DischargeTask")
                     {
-                        if(gauge.Current == 0)
+                        elapsedTime = DateTime.Now.Subtract(t.StartTime);
+
+                        if (gauge.Current == 0)
                         {
                             if (cycleModeType == BQEV23K.CycleModeType.Manual)
                             {
@@ -324,7 +328,16 @@ namespace BQEV23K
                                 }
                             }
                         }
-                        elapsedTime = DateTime.Now.Subtract(t.StartTime);
+                        else
+                        {
+                            if (elapsedTime.TotalSeconds > 1 * 60) {
+                                if (m5010.IsConnected)
+                                {
+                                    taskList[currentTask].SetCurrent(m5010);
+                                }
+                            }
+                        }
+                        
                     }
                 }
                 return false;

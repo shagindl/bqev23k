@@ -143,10 +143,14 @@
                                 </Button>
                             </StackPanel>
                             <WrapPanel DockPanel.Dock="Left" Orientation="Vertical">
-                                <Label x:Name="LearningTimeLabel" HorizontalAlignment="Left" Width="200"/>
-                                <Label x:Name="LearningVoltageLabel" HorizontalAlignment="Left" Width="200"/>
-                                <Label x:Name="LearningCurrentLabel" HorizontalAlignment="Left" Width="200"/>
-                                <Label x:Name="LearningTemperatureLabel" HorizontalAlignment="Left" Width="200"/>
+                                <Label x:Name="LearningTimeLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltageLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningCurrentLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningTemperatureLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage1Label" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage2Label" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage3Label" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage4Label" HorizontalAlignment="Left" Width="150"/>
                             </WrapPanel>
                         </DockPanel>
                     </GroupBox>

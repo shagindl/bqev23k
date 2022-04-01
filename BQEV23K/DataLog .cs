@@ -35,8 +35,8 @@ namespace BQEV23K
 
                 using (System.IO.StreamWriter writer = new System.IO.StreamWriter(@"Logs\" + NameFile, false, System.Text.Encoding.UTF8))
                 {
-                    writer.WriteLine("DataTime, Type, Voltage[mV], Current[mA], " +
-                        "LStatus, IT Status[hex], Battery Status[hex], Manufacturing Status[hex], Operation Status A[hex]");
+                    writer.WriteLine("DataTime,Type,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA], " +
+                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex]");
                 }
             } catch (Exception ex)
             {
@@ -82,6 +82,10 @@ namespace BQEV23K
         {
             var item = DateTime.Now.ToString() + "," + "gauge," +
                             gauge.Voltage.ToString() + "," +
+                            gauge.GetDisplayValue("Cell 1 Voltage") + "," +
+                            gauge.GetDisplayValue("Cell 2 Voltage") + "," +
+                            gauge.GetDisplayValue("Cell 3 Voltage") + "," +
+                            gauge.GetDisplayValue("Cell 4 Voltage") + "," +
                             gauge.Current.ToString() + "," +
                             gauge.GetDisplayValue("LStatus") + "," +
                             gauge.GetDisplayValue("IT Status") + "," +

@@ -31,6 +31,7 @@ namespace BQEV23K
         private GaugeInfo gauge;
         private DispatcherTimer timerUpdateGUI;
         private DispatcherTimer timerUpdatePlot;
+        private DispatcherTimer timerDataLog;
         private Cycle cycle;
         private CycleType selectedCycleType = CycleType.None;
         private CycleModeType selectedCycleModeType = CycleModeType.None;
@@ -46,7 +47,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.2 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.3 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -68,6 +69,10 @@ namespace BQEV23K
             timerUpdatePlot = new DispatcherTimer();
             timerUpdatePlot.Tick += new EventHandler(UpdatePlot);
             timerUpdatePlot.Interval = new TimeSpan(0, 0, 0, 5, 0);
+
+            timerDataLog = new DispatcherTimer();
+            timerDataLog.Tick += new EventHandler(UpdateDataLog);
+            timerDataLog.Interval = new TimeSpan(0, 0, 0, 1, 0);
         }
 
         /// <summary>
@@ -123,6 +128,11 @@ namespace BQEV23K
                 gauge.StopPolling();
                 gauge.ReadDeviceMutex.WaitOne();
             }
+            // -- All Stop
+            timerConnectionM5010.Stop();
+            timerUpdateGUI.Stop();
+            timerUpdatePlot.Stop();
+            timerDataLog.Stop();
 
             board.Disconnect();
         }
@@ -176,7 +186,7 @@ namespace BQEV23K
                     IconGauge.Source = GetImageSourceFromResource("Gauge-Disabled-128.png");
                     LabelGaugeName.Content = LabelGaugeVersion.Text = string.Empty;
                     LabelGaugeVoltage.Content = LabelGaugeTemperature.Content = string.Empty;
-                }
+               }
                 else
                 {
                     IconArrows.Source = GetImageSourceFromResource("Arrows-48.png");
@@ -190,6 +200,7 @@ namespace BQEV23K
                     LabelGaugeVersion.Text = s;
 
                     LabelGaugeVoltage.Content = gauge.GetDisplayValue("Voltage");
+
                     LabelGaugeTemperature.Content = gauge.GetDisplayValue("Temperature");
 
                     FlagFC.IsChecked = gauge.FlagFC;
@@ -217,9 +228,15 @@ namespace BQEV23K
 
             if (cycle != null && cycle.CycleInProgress)
             {
+
                 LearningVoltageLabel.Content = "Voltage: " + gauge.GetDisplayValue("Voltage");
                 LearningCurrentLabel.Content = "Current: " + gauge.GetDisplayValue("Current");
                 LearningTemperatureLabel.Content = "Temperature: " + gauge.GetDisplayValue("Temperature");
+                LearningVoltage1Label.Content = "Voltage C1: " + gauge.GetDisplayValue("Cell 1 Voltage");
+                LearningVoltage2Label.Content = "Voltage C2: " + gauge.GetDisplayValue("Cell 2 Voltage");
+                LearningVoltage3Label.Content = "Voltage C3: " + gauge.GetDisplayValue("Cell 3 Voltage");
+                LearningVoltage4Label.Content = "Voltage C4: " + gauge.GetDisplayValue("Cell 4 Voltage");
+
                 if (cycle.RunningTaskName == "RelaxTask")
                 {
                     LearningTimeLabel.Content = "Waiting Time: " + cycle.ElapsedTime.ToString(@"hh\:mm\:ss");
@@ -239,19 +256,15 @@ namespace BQEV23K
         public void UpdatePlot(object sender, System.EventArgs e)
         {
             plot.Output(gauge.Voltage, gauge.Current, gauge.Temperature);
-            //lock (plot.Plot1.SyncRoot)
-            //{
-            //    plot.Voltage = gauge.Voltage;
-            //    plot.Current = gauge.Current;
-            //    plot.Temperature = gauge.Temperature;
-            //}
-            //plot.Plot1.InvalidatePlot(true); // Refresh plot view
 
             if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
             {
                 gpcLog.WriteLine(gauge.Voltage, gauge.Current, gauge.Temperature);
             }
-            if(DataLog != null)
+        }
+        public void UpdateDataLog(object sender, System.EventArgs e)
+        {
+            if (DataLog != null)
             {
                 this.Dispatcher.Invoke(new Action(() =>
                 {
@@ -260,12 +273,12 @@ namespace BQEV23K
             }
         }
 
-        /// <summary>
-        /// Get image from assembly ressource
-        /// </summary>
-        /// <param name="resourceName">Image resource name to get.</param>
-        /// <returns>ImageSource from resource name.</returns>
-        static internal ImageSource GetImageSourceFromResource(string resourceName)
+            /// <summary>
+            /// Get image from assembly ressource
+            /// </summary>
+            /// <param name="resourceName">Image resource name to get.</param>
+            /// <returns>ImageSource from resource name.</returns>
+            static internal ImageSource GetImageSourceFromResource(string resourceName)
         {
             Uri oUri = new Uri("pack://application:,,,/" + "BQEV23K" + ";component/Resources/" + resourceName, UriKind.RelativeOrAbsolute);
             return BitmapFrame.Create(oUri);
@@ -347,9 +360,11 @@ namespace BQEV23K
                     return;
                 }
 
-                if (gauge.GetReadValue("LStatus") != 0x04)
+                int LStatus = (int)gauge.GetReadValue("LStatus");
+                if (LStatus != 0x04)
                 {
-                    LogView.AddEntry("Error: LStatus != 0x04.");
+                    var mess = @"Error: LStatus != 0x04 " + @"[0x" + LStatus.ToString("X2") + @"].";
+                    LogView.AddEntry(mess);
                     return;
                 }
             }
@@ -411,11 +426,11 @@ namespace BQEV23K
             if (selectedCycleType == CycleType.LearningCycle)
             {
                 tl = new List<GenericTask> {
-                new DischargeTask(termVoltage),
+                new DischargeTask(termVoltage, 4.0),
                 new RelaxTask(relaxTimeDischarge),
                 new ChargeTask(taperCurrent),
                 new RelaxTask(relaxTimeCharge),
-                new DischargeTask(termVoltage),
+                new DischargeTask(termVoltage, 1.0),
                 new RelaxTask(relaxTimeDischarge) };
 
                 if (true)
@@ -423,7 +438,7 @@ namespace BQEV23K
                     tl.AddRange(new GenericTask[]{
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge),
-                    new DischargeTask(termVoltage),
+                    new DischargeTask(termVoltage, 1.0),
                     new RelaxTask(relaxTimeDischarge)});
                 }
             }
@@ -432,14 +447,14 @@ namespace BQEV23K
                 tl = new List<GenericTask> {
                 new ChargeTask(taperCurrent),
                 new RelaxTask(relaxTimeCharge),
-                new DischargeTask(termVoltage),
+                new DischargeTask(termVoltage, 1.0),
                 new RelaxTask(relaxTimeDischarge) };
 
                 gpcLog = new GpcDataLog(cellCount);
             }
             DataLog = new DataLog_t();
 
-            cycle = new Cycle(tl, gauge);
+            cycle = new Cycle(tl, gauge, Mark5010);
             cycle.CycleModeType = selectedCycleModeType;
             cycle.LogWriteEvent += LogView.AddEntry;
             cycle.LogWriteEvent += DataLog.WriteMessage;
@@ -447,6 +462,7 @@ namespace BQEV23K
             cycle.StartCycle();
 
             timerUpdatePlot.Start();
+            timerDataLog.Start();
 
             ButtonCycleStart.IsEnabled = false;
             ButtonCycleCancel.IsEnabled = true;
@@ -461,6 +477,7 @@ namespace BQEV23K
         {
             // Add trophy here.
             timerUpdatePlot.Stop();
+            timerDataLog.Stop();
             ButtonCycleStart.IsEnabled = true;
             ButtonCycleCancel.IsEnabled = false;
         }
@@ -473,6 +490,7 @@ namespace BQEV23K
         private void ButtonCycleCancel_Click(object sender, RoutedEventArgs e)
         {
             timerUpdatePlot.Stop();
+            timerDataLog.Stop();
             cycle.CancelCycle();
             ButtonCycleStart.IsEnabled = true;
             ButtonCycleCancel.IsEnabled = false;

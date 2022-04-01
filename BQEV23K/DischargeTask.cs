@@ -13,6 +13,7 @@ namespace BQEV23K
     {
         private const int TerminationHoldOffMilliseconds = 5000;
         private int terminateVoltage;
+        private double currentDeisharge, current;
         private bool isCompleted = false;
         private DateTime startTime;
 
@@ -55,10 +56,12 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="tv">Termination voltage to end task.</param>
-        public DischargeTask(int tv)
+        public DischargeTask(int tv, double _current = 4.0)
         {
             startTime = DateTime.Now;
             terminateVoltage = tv;
+            currentDeisharge = _current;
+            current = -1.0;
         }
 
         /// <summary>
@@ -91,6 +94,17 @@ namespace BQEV23K
                 }
             }
             return isCompleted;
+        }
+        override public void SetCurrent(object _m5010)
+        {
+            var m5010 = (M5010.MARK_5010)_m5010;
+
+            if(current != currentDeisharge)
+            {
+                m5010.SetCurrent(currentDeisharge);
+
+                current = currentDeisharge;
+            }
         }
     }
 }

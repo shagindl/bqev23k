@@ -212,10 +212,13 @@ namespace BQEV23K
                     err = (EV23KError)GpioLow(EV23KGpioMask.VOUT4);
                     // -- Debug
                     //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT4);
-                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT4);
 
-                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT2);
-                    //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT2);
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT2);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT2);
+
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
 
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
@@ -605,6 +608,8 @@ namespace BQEV23K
                         if (state)
                             goto __exit;
                     }
+                    else
+                        state_GPIO = EV23KGpioMask.mskVOUTx;
 
                     state_GPIO |= (gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
@@ -642,6 +647,8 @@ namespace BQEV23K
                         if (!state)
                             goto __exit;
                     }
+                    else
+                        state_GPIO = EV23KGpioMask.mskVOUTx;
 
                     state_GPIO &= ~(gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);

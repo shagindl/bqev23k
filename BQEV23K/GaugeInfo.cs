@@ -19,7 +19,12 @@ namespace BQEV23K
             "Manufacturer Name",
             "Battery Status",
             "Manufacturing Status",
-            "Operation Status A"
+            "Operation Status A",
+
+            "Cell 1 Voltage",
+            "Cell 2 Voltage",
+            "Cell 3 Voltage",
+            "Cell 4 Voltage",
         };
 
         private EV23K EV23KBoard;
@@ -27,7 +32,7 @@ namespace BQEV23K
         private BcfgItems bcfgItems;
         private CancellationTokenSource cancelSource;
         private CancellationToken cancelToken;
-        private int voltage = 0;
+        private int voltage = 0, voltage_Cell1 = 0, voltage_Cell2 = 0, voltage_Cell3 = 0, voltage_Cell4 = 0;
         private int current = 0;
         private double temperature = 0.0;
         private Timer pollTimer;
@@ -48,6 +53,35 @@ namespace BQEV23K
                 return voltage;
             }
         }
+        public int VoltageCell1
+        {
+            get
+            {
+                return voltage_Cell1;
+            }
+        }
+        public int VoltageCell2
+        {
+            get
+            {
+                return voltage_Cell2;
+            }
+        }
+        public int VoltageCell3
+        {
+            get
+            {
+                return voltage_Cell3;
+            }
+        }
+        public int VoltageCell4
+        {
+            get
+            {
+                return voltage_Cell4;
+            }
+        }
+
 
         /// <summary>
         /// Get battery current.
@@ -392,6 +426,11 @@ namespace BQEV23K
                 }
                 
                 voltage = (int)GetReadValue("Voltage");
+                voltage_Cell1 = (int)GetReadValue("Cell 1 Voltage");
+                voltage_Cell2 = (int)GetReadValue("Cell 2 Voltage");
+                voltage_Cell3 = (int)GetReadValue("Cell 3 Voltage");
+                voltage_Cell4 = (int)GetReadValue("Cell 4 Voltage");
+
                 temperature = GetReadValue("Temperature");
                 current = (int)GetReadValue("Current");
 
