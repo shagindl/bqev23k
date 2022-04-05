@@ -330,7 +330,7 @@ namespace BQEV23K
                         }
                         else
                         {
-                            if (elapsedTime.TotalSeconds > 1 * 60) {
+                            if (elapsedTime.TotalSeconds > 0.5 * 60) {
                                 if (m5010.IsConnected)
                                 {
                                     taskList[currentTask].SetCurrent(m5010);

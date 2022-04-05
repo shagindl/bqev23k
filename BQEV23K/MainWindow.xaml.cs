@@ -47,7 +47,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.5 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.6 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -468,10 +468,12 @@ namespace BQEV23K
             else if (selectedCycleType == CycleType.GpcCycle)
             {
                 tl = new List<GenericTask> {
-                new ChargeTask(taperCurrent),
-                new RelaxTask(relaxTimeCharge),
-                new DischargeTask(termVoltage, 1.0),
-                new RelaxTask(relaxTimeDischarge) };
+                    new RelaxTask(10, true),
+                    new ChargeTask(taperCurrent),
+                    new RelaxTask(relaxTimeCharge, true),
+                    new DischargeTask(termVoltage, 0.6),
+                    new RelaxTask(relaxTimeDischarge, true),
+                };
 
                 gpcLog = new GpcDataLog(cellCount);
             }
