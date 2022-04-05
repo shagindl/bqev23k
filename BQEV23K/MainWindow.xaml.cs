@@ -47,7 +47,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.4 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.5 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -256,21 +256,24 @@ namespace BQEV23K
         /// <param name="e">Not used.</param>
         public void UpdatePlot(object sender, System.EventArgs e)
         {
-            plot.Output(gauge.Voltage, gauge.Current, gauge.Temperature);
+            gauge.ReadDeviceMutex.WaitOne();
+            var Voltage = gauge.Voltage;
+            var Current = gauge.Current;
+            var Temperature = gauge.Temperature;
+            gauge.ReadDeviceMutex.ReleaseMutex();
+
+            plot.Output(Voltage, Current, Temperature);
 
             if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
             {
-                gpcLog.WriteLine(gauge.Voltage, gauge.Current, gauge.Temperature);
+                gpcLog.WriteLine(Voltage, Current, Temperature);
             }
         }
         public void UpdateDataLog(object sender, System.EventArgs e)
         {
             if (DataLog != null)
             {
-                this.Dispatcher.Invoke(new Action(() =>
-                {
-                    DataLog.WriteLine(gauge);
-                }));
+                DataLog.WriteLine(gauge);
             }
         }
 
@@ -411,13 +414,15 @@ namespace BQEV23K
             int relaxTimeDischarge = 0;
 
             float val;
+            CfgCycleChargeRelaxHours.Text = CfgCycleChargeRelaxHours.Text.Replace('.', ',');
             if (float.TryParse(CfgCycleChargeRelaxHours.Text, out val))
-                relaxTimeCharge = (int)val * 60; // Convert to minute
+                relaxTimeCharge = (int)(val * 60); // Convert to minute
             else
                 relaxTimeCharge = 120;
 
+            CfgCycleDischargeRelaxHours.Text = CfgCycleDischargeRelaxHours.Text.Replace('.', ',');
             if (float.TryParse(CfgCycleDischargeRelaxHours.Text, out val))
-                relaxTimeDischarge = (int)val * 60; // Conver to minutes
+                relaxTimeDischarge = (int)(val * 60); // Conver to minutes
             else
                 relaxTimeDischarge = 300;
 
@@ -433,20 +438,31 @@ namespace BQEV23K
             if (selectedCycleType == CycleType.LearningCycle)
             {
                 tl = new List<GenericTask> {
-                new DischargeTask(termVoltage, 4.0),
-                new RelaxTask(relaxTimeDischarge),
-                new ChargeTask(taperCurrent),
-                new RelaxTask(relaxTimeCharge),
-                new DischargeTask(termVoltage, 1.0),
-                new RelaxTask(relaxTimeDischarge) };
+                    new DischargeTask(termVoltage, 4.0),
+                    new RelaxTask(relaxTimeDischarge),
+                    new RelaxTask(10, true),
+
+                    new ChargeTask(taperCurrent),
+                    new RelaxTask(relaxTimeCharge),
+                    new RelaxTask(10, true),
+
+                    new DischargeTask(termVoltage, 1.0),
+                    new RelaxTask(relaxTimeDischarge),
+                    new RelaxTask(10, true),
+                };
+                
 
                 if (true)
                 { // Perform field update cycle to reach LStatus 0x0E
                     tl.AddRange(new GenericTask[]{
-                    new ChargeTask(taperCurrent),
-                    new RelaxTask(relaxTimeCharge),
-                    new DischargeTask(termVoltage, 1.0),
-                    new RelaxTask(relaxTimeDischarge)});
+                        new ChargeTask(taperCurrent),
+                        new RelaxTask(relaxTimeCharge),
+                        new RelaxTask(10, true),
+
+                        new DischargeTask(termVoltage, 1.0),
+                        new RelaxTask(relaxTimeDischarge),
+                        new RelaxTask(10, true),
+                    });
                 }
             }
             else if (selectedCycleType == CycleType.GpcCycle)

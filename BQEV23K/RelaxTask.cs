@@ -15,6 +15,7 @@ namespace BQEV23K
         private int duration = 0;
         private DateTime startTime;
         private DateTime endTime;
+        private bool ModePause = false;
 
         #region Properties
         /// <summary>
@@ -24,7 +25,7 @@ namespace BQEV23K
         {
             get
             {
-                return "Relax";
+                return ModePause ? "Pause": "Relax";
             }
         }
 
@@ -66,9 +67,10 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="d">Duration of task.</param>
-        public RelaxTask(int d)
+        public RelaxTask(int d, bool _ModePause = false)
         {
             duration = d;
+            ModePause = _ModePause;
         }
 
         /// <summary>
@@ -96,8 +98,11 @@ namespace BQEV23K
                 if (DateTime.Compare(DateTime.Now, endTime) > 0)
                     return true;
                 // or more accurate when VOK and RDIS are cleared (SLUA848, chapter 4.2.2)
-                if (gaugeInfo.FlagVOK == false && gaugeInfo.FlagRDIS == false)
-                    return true;
+                if ( !ModePause )
+                {
+                    if (gaugeInfo.FlagVOK == false && gaugeInfo.FlagRDIS == false)
+                        return true;
+                }
             }
             return false;
         }

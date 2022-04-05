@@ -608,7 +608,7 @@ namespace BQEV23K
 
         __exit:
             EV23KMutex.ReleaseMutex();
-            if (err2log != EV23KError.Unknow) LogWrite($"GpioLow {gpio} err = {err}");
+            if (err2log != EV23KError.Unknow) LogWrite($"GpioHigh {gpio} err = {err}");
 
             return err;
         }
@@ -692,7 +692,7 @@ namespace BQEV23K
 
         __exit:
             EV23KMutex.ReleaseMutex();
-            if (err2log != EV23KError.Unknow) LogWrite($"GpioLow {gpio} err = {err}");
+            if (err2log != EV23KError.Unknow) LogWrite($"GpioToggle {gpio} state = {state} err = {err}");
 
             return err;
         }

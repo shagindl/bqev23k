@@ -9,7 +9,7 @@ namespace BQEV23K
     /// </summary>
     public class GaugeInfo : IDisposable
     {
-        private const int GaugeDataPollingInterval = 500;
+        private const int GaugeDataPollingInterval = 1000;
         private string[] cyclicReadGaugeDataRegisters = new string[]{
             "Voltage",
             "Temperature",
