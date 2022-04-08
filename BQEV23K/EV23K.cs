@@ -58,6 +58,10 @@ namespace BQEV23K
         VOUT2 = 0x0102,     // PORT2
         VOUT3 = 0x0103,     // PORT3
         VOUT4 = 0x0104,     // PORT4
+        // --
+        VOUT_LOAD = VOUT1,
+        VOUT_CHARG = VOUT2,
+        VOUT_START_BTN = VOUT4
     }
 
     /// <summary>
@@ -220,14 +224,14 @@ namespace BQEV23K
                     err = (EV23KError)GpioLow(EV23KGpioMask.VOUT2);
                     err = (EV23KError)GpioLow(EV23KGpioMask.VOUT4);
                     // -- Debug
-                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT4);
-                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT4);
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT_START_BTN);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT_START_BTN);
 
-                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT2);
-                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT2);
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT_CHARG);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT_CHARG);
 
-                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT1);
-                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT1);
+                    //err = (EV23KError)GpioHigh(EV23KGpioMask.VOUT_LOAD);
+                    //err = (EV23KError)GpioLow(EV23KGpioMask.VOUT_LOAD);
 
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT3);
@@ -246,12 +250,12 @@ namespace BQEV23K
         /// <summary>
         /// Disconnect EV2300 board.
         /// </summary>
-        public async void Disconnect()
+        public void Disconnect()
         {
             isPresent = false;
             timerCheckStatus.Enabled = false;
 
-            await Task.Delay(3000);
+            Task.Delay(1000);
 
             try {
                 EV23KBoard.CloseDevice();

@@ -337,3 +337,17 @@ ASALocalRun/
 /BQEV23K/*.bak
 /BQEV23K/Resources/1
 *.bak
+/Utils/LogParser/*.xlsx
+/Utils/LogParser/*.zip
+/Utils/GPCCHEM/tmp
+/Utils/GPCCHEM/ChemUpdate954
+/Utils/DeletRepeatLine/*.csv
+
+/Utils/GPCCHEM/*.xlsx
+/Utils/GPCCHEM/GPCPackage
+/Utils/GPCCHEM/*.xmcd
+/Utils/GPCCHEM/*.mcd
+/Utils/GPCCHEM/*.xls
+/Utils/GPCCHEM/ChecmID_№1
+/Utils/GPCCHEM/*.csv
+/Utils/GPCCHEM/chemdat6

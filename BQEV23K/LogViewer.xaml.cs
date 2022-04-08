@@ -54,14 +54,21 @@ namespace BQEV23K
 
         public void AddEntry(string log)
         {
-            LogWrite(log);
-
-            Application.Current.Dispatcher.BeginInvoke((Action)(() => LogEntries.Add(new LogEntry()
+            try
             {
-                Index = index++,
-                DateTime = DateTime.Now,
-                Message = log
-            })));
+                LogWrite(log);
+
+                Application.Current.Dispatcher.BeginInvoke((Action)(() => LogEntries.Add(new LogEntry()
+                {
+                    Index = index++,
+                    DateTime = DateTime.Now,
+                    Message = log
+                })));
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         public void AddEntry(object sender, LogWriteEventArgs e)

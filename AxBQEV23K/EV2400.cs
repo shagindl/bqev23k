@@ -42,7 +42,7 @@ class bq80xrw
         [DllImport("bq80xrw.dll", EntryPoint = "OpenDeviceA", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
         public static extern short OpenDeviceA(IntPtr DevName);
 
-        [DllImport("bq80xrw.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("bq80xrw.dll", EntryPoint = "CloseDeviceA", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
         public static extern short CloseDevice();
 
         //public static extern void GetAllFreeBoards(int nNumBrdsToGet, ref int nNumBrds, ref string ListBrdNames, int bufferLength);

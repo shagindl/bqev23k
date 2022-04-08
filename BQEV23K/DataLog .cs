@@ -14,6 +14,7 @@ namespace BQEV23K
         private DateTime startTime;
         private string NameFile, NameGpcFile;
         private System.Threading.Mutex Mutex = new System.Threading.Mutex();
+        //System.IO.StreamWriter writer, writer_gpc;
 
         /// <summary>
         /// Constructor
@@ -21,6 +22,7 @@ namespace BQEV23K
         public DataLog_t()
         {
             startTime = DateTime.Now;
+            Mutex.WaitOne();
             try
             {
                 if(!Directory.Exists("Logs"))
@@ -34,12 +36,14 @@ namespace BQEV23K
                 } while (File.Exists(@"Logs\" + NameFile));
                 NameGpcFile = $"{DTS} GpcLog.csv";
 
-                using (System.IO.StreamWriter writer = new System.IO.StreamWriter($@"Logs\{ NameFile }", false, System.Text.Encoding.UTF8))
+                using (StreamWriter writer = new System.IO.StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
                 {
-                    writer.WriteLine("Time[s],DataTime,Info,Temperature °C,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA], " +
-                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex]");
+                    writer.WriteLine("Time[s],DataTime,Info,Temperature °C,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA]," +
+                        "RSOC[%],ASOC[%]," +
+                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex],Operation Status B[hex]," + 
+                        "Safety Status A+B[hex],Safety Status C+D[hex]");
                 }
-                using (System.IO.StreamWriter writer_gpc = new System.IO.StreamWriter($@"Logs\{ NameGpcFile }", false, System.Text.Encoding.UTF8))
+                using (StreamWriter writer_gpc = new System.IO.StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
                 {
                     writer_gpc.WriteLine("ProcessingType=2");
                     writer_gpc.WriteLine("NumCellSeries=4");
@@ -47,13 +51,20 @@ namespace BQEV23K
                     writer_gpc.WriteLine("VoltageColumn=3");
                     writer_gpc.WriteLine("CurrentColumn=8");
                     writer_gpc.WriteLine("TemperatureColumn=2");
-                    writer_gpc.WriteLine("Time[s],DataTime,Temperature °C,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA], " +
-                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex]");
+                    writer_gpc.WriteLine("Time[s],DataTime,Temperature °C,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA]," +
+                        "RSOC[%],ASOC[%]," +
+                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex],Operation Status B[hex]," +
+                        "Safety Status A+B[hex],Safety Status C+D[hex]");
                 }
             } catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
+            Mutex.ReleaseMutex();
+        }
+        ~DataLog_t()
+        {
+            Dispose(false);
         }
         public void Dispose()
         {
@@ -62,42 +73,57 @@ namespace BQEV23K
         }
         protected virtual void Dispose(bool disposing)
         {
-            Mutex.Dispose();
+            if (disposing)
+            {
+                Mutex.WaitOne();
+                //if (writer != null)
+                //{
+                //    writer.Flush();
+                //    writer.Close();
+                //    writer.Dispose();
+                //}
+                //if (writer_gpc != null)
+                //{
+                //    writer_gpc.Flush();
+                //    writer_gpc.Close();
+                //    writer_gpc.Dispose();
+                //}
+                Mutex.ReleaseMutex();
+            }
         }
-
         /// <summary>
         /// Write new data line to log file.
         /// </summary>
         /// 
-        public async void WriteLine(string info, string item)
+        public void WriteLine(string info, string item)
         {
-            var time = DateTime.Now.Subtract(startTime).TotalSeconds.ToString("F1", CultureInfo.CreateSpecificCulture("en-US"));
-            var dts = DateTime.Now.ToString();
-
-            await Task.Run(() =>
+            Task.Run(() =>
             {
+                string time = DateTime.Now.Subtract(startTime).TotalSeconds.ToString("F1", CultureInfo.CreateSpecificCulture("en-US"));
+                string dts = DateTime.Now.ToString();
+
+                Mutex.WaitOne();
                 try
                 {
-                    Mutex.WaitOne();
+                    
                     if(info == "gauge")
                     {
-                        using (System.IO.StreamWriter writer_gpc = new System.IO.StreamWriter(@"Logs\" + NameGpcFile, true, System.Text.Encoding.UTF8))
+                        using (StreamWriter writer_gpc = new StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
                         {
-                            writer_gpc.WriteLine($"{time},{dts},{item}");
+                            writer_gpc.WriteLineAsync($"{time},{dts},{item}");
                         }
                         info += ",";
                     }
-                    using (System.IO.StreamWriter writer = new System.IO.StreamWriter(@"Logs\" + NameFile, true, System.Text.Encoding.UTF8))
+                    using (StreamWriter writer = new StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
                     {
-                        writer.WriteLine($"{time},{dts},{info}{item}");
+                        writer.WriteLineAsync($"{time},{dts},{info}{item}");
                     }
-                    Mutex.ReleaseMutex();
                 }
                 catch (Exception ex)
                 {
-                    Mutex.ReleaseMutex();
                     Console.WriteLine(ex.Message);
                 }
+                Mutex.ReleaseMutex();
             });
         }
 
@@ -111,22 +137,20 @@ namespace BQEV23K
                             gauge.GetDisplayValue("Cell 3 Voltage") + "," +
                             gauge.GetDisplayValue("Cell 4 Voltage") + "," +
                             gauge.Current.ToString() + "," +
+                            gauge.GetDisplayValue("Relative State of Charge") + "," +
+                            gauge.GetDisplayValue("Absolute State of Charge") + "," +
                             gauge.GetDisplayValue("LStatus") + "," +
                             gauge.GetDisplayValue("IT Status") + "," +
                             gauge.GetDisplayValue("Battery Status") + "," +
                             gauge.GetDisplayValue("Manufacturing Status") + "," +
-                            gauge.GetDisplayValue("Operation Status A");
+                            gauge.GetDisplayValue("Operation Status A") + "," +
+                            gauge.GetDisplayValue("Operation Status B") + "," +
+                            gauge.GetDisplayValue("Safety Status A+B") + "," +
+                            gauge.GetDisplayValue("Safety Status C+D");
             gauge.ReadDeviceMutex.ReleaseMutex();
             WriteLine("gauge", item);
         }
-        //public async void WriteMessage(object sender, LogWriteEventArgs e)
-        //{
-        //    var item = DateTime.Now.ToString() + "," + e.Message;
-        //    await Task.Run(() =>
-        //    {
-        //        WriteLine(item);
-        //    });
-        //}
+
         public void WriteMessage(object sender, LogWriteEventArgs e)
         {
             WriteLine("info:", e.Message);

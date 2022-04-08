@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Threading;
 
 /**
  * How to setup such project see:
@@ -27,11 +28,14 @@ namespace BQEV23K
         private PlotViewModel plot;
         private EV23K board;
         private M5010.MARK_5010 Mark5010;
-        private System.Timers.Timer timerConnectionM5010;
+        Thread ThreadConnectionM5010;
+        CancellationTokenSource ctConnectionM5010;
         private GaugeInfo gauge;
         private DispatcherTimer timerUpdateGUI;
-        private System.Timers.Timer timerUpdatePlot;
-        private System.Timers.Timer timerDataLog;
+        Thread ThreadUpdatePlot;
+        CancellationTokenSource ctUpdatePlot = new CancellationTokenSource();
+        Thread ThreadDataLog;
+        CancellationTokenSource ctDataLog = new CancellationTokenSource();
         private Cycle cycle;
         private CycleType selectedCycleType = CycleType.None;
         private CycleModeType selectedCycleModeType = CycleModeType.None;
@@ -47,7 +51,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.6 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.0.7.3 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -56,20 +60,15 @@ namespace BQEV23K
 
             Mark5010 = new M5010.MARK_5010();
             // -- Connection
-            timerConnectionM5010 = new System.Timers.Timer(5000);
-            timerConnectionM5010.Elapsed += new System.Timers.ElapsedEventHandler(TaskConnectionM5010);
-            timerConnectionM5010.Start();
+            ctConnectionM5010 = new CancellationTokenSource();
+            ThreadConnectionM5010 = new Thread(TaskConnectionM5010);
+            ThreadConnectionM5010.Start(ctConnectionM5010.Token);
 
             timerUpdateGUI = new DispatcherTimer();
             timerUpdateGUI.Tick += new EventHandler(UpdateGui);
-            timerUpdateGUI.Interval = new TimeSpan(0, 0, 0, 0, 500);
+            timerUpdateGUI.Interval = new TimeSpan(0, 0, 0, 1, 0);
+            fInUpdateGui = false;
             timerUpdateGUI.Start();
-
-            timerUpdatePlot = new System.Timers.Timer(5000);
-            timerUpdatePlot.Elapsed += new System.Timers.ElapsedEventHandler(UpdatePlot);
-
-            timerDataLog = new System.Timers.Timer(1000);
-            timerDataLog.Elapsed += new System.Timers.ElapsedEventHandler(UpdateDataLog);
         }
 
         /// <summary>
@@ -117,19 +116,29 @@ namespace BQEV23K
             // -- Disable All
             board.DisableAll();
 
+            if (gpcLog != null)
+            {
+                gpcLog.Dispose();
+            }
             if (cycle != null)
                 cycle.CancelCycle();
 
             if(gauge != null)
             {
-                gauge.StopPolling();
                 gauge.ReadDeviceMutex.WaitOne();
+                gauge.StopPolling();
+                gauge.ReadDeviceMutex.ReleaseMutex();
+            }
+            if (DataLog != null)
+            {
+                LodDeletEvent();
+                DataLog.Dispose();
             }
             // -- All Stop
-            timerConnectionM5010.Stop();
             timerUpdateGUI.Stop();
-            timerUpdatePlot.Stop();
-            timerDataLog.Stop();
+            ctConnectionM5010.Cancel();
+            ctUpdatePlot.Cancel();
+            ctDataLog.Cancel();
 
             board.Disconnect();
         }
@@ -145,17 +154,30 @@ namespace BQEV23K
 
         protected virtual void Dispose(bool disposing)
         {
-            timerConnectionM5010.Dispose();
-            timerDataLog.Dispose();
-            timerUpdatePlot.Dispose();
-
-            if (gauge != null)
+            if (disposing)
             {
-                gauge.ReadDeviceMutex.WaitOne();
-                gauge.Dispose();
+
+                ctConnectionM5010.Cancel();
+                ctUpdatePlot.Cancel();
+                ctDataLog.Cancel();
+
+                if (gpcLog != null)
+                {
+                    gpcLog.Dispose();
+                }
+                if (gauge != null)
+                {
+                    gauge.Dispose();
+                }
+                if (cycle != null)
+                    cycle.Dispose();
+                if (DataLog != null)
+                {
+                    LodDeletEvent();
+                    DataLog.Dispose();
+                }
+                board.Dispose();
             }
-            cycle.Dispose();
-            board.Dispose();
         }
 
         /// <summary>
@@ -163,8 +185,12 @@ namespace BQEV23K
         /// </summary>
         /// <param name="sender">Not used.</param>
         /// <param name="e">Not used</param>
+        bool fInUpdateGui = false;
         public void UpdateGui(object sender, System.EventArgs e)
         {
+            if (fInUpdateGui) return;
+
+            fInUpdateGui = true;
             if (board != null)
             {
                 if (board.IsPresent)
@@ -247,6 +273,7 @@ namespace BQEV23K
                     LearningTimeLabel.Content = "Elapsed Time: " + cycle.ElapsedTime.ToString(@"hh\:mm\:ss");
                 }
             }
+            fInUpdateGui = false;
         }
 
         /// <summary>
@@ -254,40 +281,96 @@ namespace BQEV23K
         /// </summary>
         /// <param name="sender">Not used.</param>
         /// <param name="e">Not used.</param>
-        public void UpdatePlot(object sender, System.EventArgs e)
+        private bool InUpdatePlot = false;
+        public void UpdatePlot(object _ct)
         {
-            gauge.ReadDeviceMutex.WaitOne();
-            var Voltage = gauge.Voltage;
-            var Current = gauge.Current;
-            var Temperature = gauge.Temperature;
-            gauge.ReadDeviceMutex.ReleaseMutex();
+            var ct = (CancellationToken)_ct;
 
-            plot.Output(Voltage, Current, Temperature);
-
-            if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
+            try
             {
-                gpcLog.WriteLine(Voltage, Current, Temperature);
+                do
+                {
+                    if (InUpdatePlot) return;
+
+                    InUpdatePlot = true;
+                    gauge.ReadDeviceMutex.WaitOne();
+                    var Voltage = gauge.Voltage;
+                    var Current = gauge.Current;
+                    var Temperature = gauge.Temperature;
+                    gauge.ReadDeviceMutex.ReleaseMutex();
+
+                    plot.Output(Voltage, Current, Temperature);
+
+                    if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
+                    {
+                        gpcLog.WriteLine(Voltage, Current, Temperature);
+                    }
+                    InUpdatePlot = false;
+
+                    Task.Delay(5000, ct).Wait();
+                } while (!ct.IsCancellationRequested);
+            }
+            catch (Exception)
+            {
+
             }
         }
-        public void UpdateDataLog(object sender, System.EventArgs e)
+        //public void UpdateDataLog(object sender, System.EventArgs e)
+        public void UpdateDataLog(object _ct)
         {
-            if (DataLog != null)
+            var ct = (CancellationToken)_ct;
+
+            try
             {
-                DataLog.WriteLine(gauge);
+                do
+                {
+                    if (DataLog != null)
+                    {
+                        DataLog.WriteLine(gauge);
+                    }
+
+                    Task.Delay(1000, ct).Wait();
+                } while (!ct.IsCancellationRequested);
+            }
+            catch (Exception)
+            {
+
             }
         }
 
-            /// <summary>
-            /// Get image from assembly ressource
-            /// </summary>
-            /// <param name="resourceName">Image resource name to get.</param>
-            /// <returns>ImageSource from resource name.</returns>
-            static internal ImageSource GetImageSourceFromResource(string resourceName)
+        /// <summary>
+        /// Get image from assembly ressource
+        /// </summary>
+        /// <param name="resourceName">Image resource name to get.</param>
+        /// <returns>ImageSource from resource name.</returns>
+        static internal ImageSource GetImageSourceFromResource(string resourceName)
         {
             Uri oUri = new Uri("pack://application:,,,/" + "BQEV23K" + ";component/Resources/" + resourceName, UriKind.RelativeOrAbsolute);
             return BitmapFrame.Create(oUri);
         }
-
+        void LogAddEvent()
+        {
+            DataLog = new DataLog_t();
+            if(gauge != null)
+                gauge.LogWriteEvent += DataLog.WriteMessage;
+            if (LogView != null)
+                LogView.LogWriteEvent += DataLog.WriteMessage;
+            if (board != null)
+                board.LogWriteEvent += DataLog.WriteMessage;
+            if (Mark5010 != null)
+                Mark5010.LogWriteEvent += DataLog.WriteMessage;
+        }
+        void LodDeletEvent()
+        {
+            if (gauge != null)
+                gauge.LogWriteEvent -= DataLog.WriteMessage;
+            if (LogView != null)
+                LogView.LogWriteEvent -= DataLog.WriteMessage;
+            if (board != null)
+                board.LogWriteEvent -= DataLog.WriteMessage;
+            if (Mark5010 != null)
+                Mark5010.LogWriteEvent -= DataLog.WriteMessage;
+        }
         /// <summary>
         /// Start new learning or GPC cycle on button click.
         /// </summary>
@@ -298,11 +381,7 @@ namespace BQEV23K
             int cellCount = 0;
             int.TryParse(CfgCycleCellCount.Text, out cellCount);
 
-            DataLog = new DataLog_t();
-            gauge.LogWriteEvent += DataLog.WriteMessage;
-            LogView.LogWriteEvent += DataLog.WriteMessage;
-            board.LogWriteEvent += DataLog.WriteMessage;
-            Mark5010.LogWriteEvent += DataLog.WriteMessage;
+            LogAddEvent();
 
             if (cellCount <= 0 || cellCount > 7)
             {
@@ -440,15 +519,10 @@ namespace BQEV23K
                 tl = new List<GenericTask> {
                     new DischargeTask(termVoltage, 4.0),
                     new RelaxTask(relaxTimeDischarge),
-                    new RelaxTask(10, true),
-
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge),
-                    new RelaxTask(10, true),
-
                     new DischargeTask(termVoltage, 1.0),
                     new RelaxTask(relaxTimeDischarge),
-                    new RelaxTask(10, true),
                 };
                 
 
@@ -457,18 +531,15 @@ namespace BQEV23K
                     tl.AddRange(new GenericTask[]{
                         new ChargeTask(taperCurrent),
                         new RelaxTask(relaxTimeCharge),
-                        new RelaxTask(10, true),
-
                         new DischargeTask(termVoltage, 1.0),
                         new RelaxTask(relaxTimeDischarge),
-                        new RelaxTask(10, true),
                     });
                 }
             }
             else if (selectedCycleType == CycleType.GpcCycle)
             {
                 tl = new List<GenericTask> {
-                    new RelaxTask(10, true),
+                    new RelaxTask(3, true),
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge, true),
                     new DischargeTask(termVoltage, 0.6),
@@ -484,8 +555,13 @@ namespace BQEV23K
             cycle.CycleCompleted += OnCycleCompleted;
             cycle.StartCycle();
 
-            timerUpdatePlot.Start();
-            timerDataLog.Start();
+            InUpdatePlot = false;
+            ctUpdatePlot = new CancellationTokenSource();
+            ThreadUpdatePlot = new Thread(UpdatePlot);
+            ThreadUpdatePlot.Start(ctUpdatePlot.Token);
+            ctDataLog = new CancellationTokenSource();
+            ThreadDataLog = new System.Threading.Thread(UpdateDataLog);
+            ThreadDataLog.Start(ctDataLog.Token);
 
             ButtonCycleStart.IsEnabled = false;
             ButtonCycleCancel.IsEnabled = true;
@@ -499,10 +575,22 @@ namespace BQEV23K
         private void OnCycleCompleted(object sender, EventArgs e)
         {
             // Add trophy here.
-            timerUpdatePlot.Stop();
-            timerDataLog.Stop();
+            ctUpdatePlot.Cancel();
+            ctDataLog.Cancel();
             ButtonCycleStart.IsEnabled = true;
             ButtonCycleCancel.IsEnabled = false;
+            // --
+            if (DataLog != null)
+            {
+                LodDeletEvent();
+                DataLog.Dispose();
+                DataLog = null;
+            }
+            if (gpcLog != null)
+            {
+                gpcLog.Dispose();
+                gpcLog = null;
+            }
         }
 
         /// <summary>
@@ -512,11 +600,24 @@ namespace BQEV23K
         /// <param name="e">Not used.</param>
         private void ButtonCycleCancel_Click(object sender, RoutedEventArgs e)
         {
-            timerUpdatePlot.Stop();
-            timerDataLog.Stop();
+            ctUpdatePlot.Cancel();
+            ctDataLog.Cancel();
+
             cycle.CancelCycle();
             ButtonCycleStart.IsEnabled = true;
             ButtonCycleCancel.IsEnabled = false;
+            // --
+            if (DataLog != null)
+            {
+                LodDeletEvent();
+                DataLog.Dispose();
+                DataLog = null;
+            }
+            if (gpcLog != null)
+            {
+                gpcLog.Dispose();
+                gpcLog = null;
+            }
         }
 
         /// <summary>
@@ -594,21 +695,37 @@ namespace BQEV23K
             PlotView.ResetAllAxes();
         }
         bool StateConnceted = false;
-        private void TaskConnectionM5010(object sender, System.EventArgs e)
+        //private void TaskConnectionM5010(object sender, System.EventArgs e)
+        public void TaskConnectionM5010(object _ct)
         {
-            var IP = Mark5010.IP + @" : " + Mark5010.port.ToString();
-            var label = @"Disconect: IP = " + IP;
+            var ct = (CancellationToken)_ct;
 
-            var Connceted = Mark5010.UpdateConnection();
-            if (StateConnceted != Connceted)
+            try
             {
-                if(Connceted)
-                    label = @"Connected: IP = " + IP;
-                else
-                    label = @"Disconect: IP = " + IP;
+                do
+                {
+                    var IP = Mark5010.IP + @" : " + Mark5010.port.ToString();
+                    var label = @"Disconect: IP = " + IP;
 
-                StateConnceted = Connceted;
-                LogView.AddEntry(label);
+                    var Connceted = Mark5010.UpdateConnection();
+                    if (StateConnceted != Connceted)
+                    {
+                        if (Connceted)
+                            label = @"Connected: IP = " + IP;
+                        else
+                            label = @"Disconect: IP = " + IP;
+
+                        StateConnceted = Connceted;
+                        LogView.AddEntry(label);
+                    }
+
+                    Task.Delay(3000, ct).Wait();
+                    //Thread.Sleep(5000);
+                } while (!ct.IsCancellationRequested);
+            }
+            catch (Exception)
+            {
+
             }
         }
     }
