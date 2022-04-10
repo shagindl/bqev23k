@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace BQEV23K
 {
@@ -9,7 +10,12 @@ namespace BQEV23K
     /// </summary>
     public class GaugeInfo : IDisposable
     {
-        private const int GaugeDataPollingInterval = 1000;
+        private const int GaugeDataPollingInterval = 100;
+        private readonly List<string> singleReadGaugeDataRegisters = new List<string> {
+            "Device Chemistry"
+        };
+        
+
         private string[] cyclicReadGaugeDataRegisters = new string[]{
             "Voltage",
             "Temperature",
@@ -23,8 +29,27 @@ namespace BQEV23K
             "Operation Status B",
             "Relative State of Charge",
             "Absolute State of Charge",
-            "Safety Status A+B",
-            "Safety Status C+D",
+
+            "Charging Status","Gauging Status",
+            "Safety Status A+B", "Safety Status C+D",
+            "Safety Alert A+B","Safety Alert C+D",
+            "PF Status A+B","PF Status C+D",
+            "PF Alert A+B","PF Alert C+D",
+
+            "Run time To Empty",
+            "Average Time to Empty",
+            "Average Time to Full",
+            "Charging Current",
+            "Charging Voltage",
+
+            "QMax Passed Q","QMax Time",
+            "DOD0 Passed Q","DOD0 Passed E","DOD0 Time",
+            "Cell 1 QMax","Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",
+            "Cell 1 QMax DOD0","Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",
+            "Cell 1 Raw DOD","Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",
+            "Cell 1 DOD0","Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",
+            "Cell 1 DODEOC","Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",
+            "Cell 1 Grid","Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",
 
             "Cell 1 Voltage",
             "Cell 2 Voltage",
@@ -405,6 +430,13 @@ namespace BQEV23K
 
             try
             {
+                // -- Single read
+                foreach (var cmd in singleReadGaugeDataRegisters)
+                {
+                    if (ReadDevice(cmd) != EV23KError.NoError)
+                        hasSMBusError = true;
+                }
+                // -- Cycle read
                 do
                 {
                     if (!EV23KBoard.IsPresent)
@@ -417,6 +449,7 @@ namespace BQEV23K
 
                     readDeviceMutex.WaitOne();
 
+                    ReadDataflash();
                     foreach (string cmd in cyclicReadGaugeDataRegisters)
                     {
                         if (ReadDevice(cmd) != EV23KError.NoError)
@@ -432,11 +465,9 @@ namespace BQEV23K
                     temperature = GetReadValue("Temperature");
                     current = (int)GetReadValue("Current");
 
-                    ReadDataflash();
-
                     readDeviceMutex.ReleaseMutex();
 
-                    Task.Delay(500, ct).Wait();
+                    Task.Delay(GaugeDataPollingInterval, ct).Wait();
                 } while (!ct.IsCancellationRequested);
             }
             catch (Exception)
@@ -605,12 +636,21 @@ namespace BQEV23K
                 if (c == null)
                     return "";
                 else
-                    return c.DisplayValue;
+                    return c.DisplayValue.Replace(',', '.');
             }
             else
             {
-                return i.DisplayValue;
+                return i.DisplayValue.Replace(',', '.');
             }
+        }
+        public string GetShortName(string caption)
+        {
+            SbsRegisterItem i = sbsItems.SbsRegister.Find(x => x.Caption == caption);
+            if (i != null)
+            {
+                return i.LogCaption.Replace(',', '.');
+            }
+            return "???";
         }
 
         /// <summary>

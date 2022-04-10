@@ -25,7 +25,7 @@ namespace BQEV23K.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
         public string CellCount {
             get {
                 return ((string)(this["CellCount"]));
@@ -37,7 +37,7 @@ namespace BQEV23K.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("800")]
         public string TaperCurrent {
             get {
                 return ((string)(this["TaperCurrent"]));
@@ -49,7 +49,7 @@ namespace BQEV23K.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("11400")]
         public string TerminationVoltage {
             get {
                 return ((string)(this["TerminationVoltage"]));
@@ -61,7 +61,7 @@ namespace BQEV23K.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2.1")]
         public string ChargeRelaxHours {
             get {
                 return ((string)(this["ChargeRelaxHours"]));
@@ -73,7 +73,7 @@ namespace BQEV23K.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("5.1")]
         public string DischargeRelaxHours {
             get {
                 return ((string)(this["DischargeRelaxHours"]));

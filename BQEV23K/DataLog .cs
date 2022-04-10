@@ -15,11 +15,32 @@ namespace BQEV23K
         private string NameFile, NameGpcFile;
         private System.Threading.Mutex Mutex = new System.Threading.Mutex();
         //System.IO.StreamWriter writer, writer_gpc;
+        List<string> lst_param = new List<string>{
+            "Temperature",
+            "Voltage", "Cell 1 Voltage", "Cell 2 Voltage","Cell 3 Voltage","Cell 4 Voltage",
+            "Current",
+            "Relative State of Charge", "Absolute State of Charge",
+            "Run time To Empty","Average Time to Empty", "Average Time to Full", "Charging Current", "Charging Voltage",
+            "QMax Passed Q","QMax Time",
+            "DOD0 Passed Q","DOD0 Passed E","DOD0 Time",
+            "Cell 1 QMax","Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",
+            "Cell 1 QMax DOD0","Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",
+            "Cell 1 Raw DOD","Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",
+            "Cell 1 DOD0","Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",
+            "Cell 1 DODEOC","Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",
+            "Cell 1 Grid","Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",
+            "LStatus","IT Status","Battery Status","Manufacturing Status","Operation Status A","Operation Status B",
+            "Charging Status","Gauging Status",
+            "Safety Status A+B", "Safety Status C+D",
+            "Safety Alert A+B","Safety Alert C+D",
+            "PF Status A+B","PF Status C+D",
+            "PF Alert A+B","PF Alert C+D",
+        };
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public DataLog_t()
+        public DataLog_t(GaugeInfo gauge)
         {
             startTime = DateTime.Now;
             Mutex.WaitOne();
@@ -30,18 +51,25 @@ namespace BQEV23K
                     Directory.CreateDirectory("Logs");
                 }
                 string DTS = "";
+                string ChemID = gauge.GetDisplayValue("CHEM_ID");
+                //ChemID = ChemID.Substring(0, ChemID.IndexOf('\0'));
                 do {
                     DTS = DateTime.Now.ToString().Replace(':', '_');
-                    NameFile = $"{DTS} Log.csv";
+                    NameFile = $"{DTS} Log_ChemID[{ChemID}].csv";
                 } while (File.Exists(@"Logs\" + NameFile));
-                NameGpcFile = $"{DTS} GpcLog.csv";
+                NameGpcFile = $"{DTS} GpcLog_ChemID[{ChemID}].csv";
 
+                string heads = "Time[s],DataTime,Info,";
+                string heads_gpc = "Time[s],DataTime,";
+                foreach (var prm in lst_param)
+                {
+                    heads += $"{ gauge.GetShortName(prm) },";
+                    heads_gpc += $"{ gauge.GetShortName(prm) },";
+                }
                 using (StreamWriter writer = new System.IO.StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
                 {
-                    writer.WriteLine("Time[s],DataTime,Info,Temperature °C,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA]," +
-                        "RSOC[%],ASOC[%]," +
-                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex],Operation Status B[hex]," + 
-                        "Safety Status A+B[hex],Safety Status C+D[hex]");
+                    writer.WriteLine($"Device Chemistry ID = {ChemID}");
+                    writer.WriteLine(heads);
                 }
                 using (StreamWriter writer_gpc = new System.IO.StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
                 {
@@ -51,10 +79,8 @@ namespace BQEV23K
                     writer_gpc.WriteLine("VoltageColumn=3");
                     writer_gpc.WriteLine("CurrentColumn=8");
                     writer_gpc.WriteLine("TemperatureColumn=2");
-                    writer_gpc.WriteLine("Time[s],DataTime,Temperature °C,Volt[mV],VoltC1[mV],VoltC2[mV],VoltC3[mV],VoltC4[mV],Current[mA]," +
-                        "RSOC[%],ASOC[%]," +
-                        "LStatus,IT Status[hex],Battery Status[hex],Manufacturing Status[hex],Operation Status A[hex],Operation Status B[hex]," +
-                        "Safety Status A+B[hex],Safety Status C+D[hex]");
+                    writer_gpc.WriteLine($"Device Chemistry ID = {ChemID}");
+                    writer_gpc.WriteLine(heads_gpc);
                 }
             } catch (Exception ex)
             {
@@ -130,23 +156,11 @@ namespace BQEV23K
         public void WriteLine(GaugeInfo gauge)
         {
             gauge.ReadDeviceMutex.WaitOne();
-            var item = gauge.Temperature.ToString().Replace(',','.') + "," +
-                            gauge.Voltage.ToString() + "," +
-                            gauge.GetDisplayValue("Cell 1 Voltage") + "," +
-                            gauge.GetDisplayValue("Cell 2 Voltage") + "," +
-                            gauge.GetDisplayValue("Cell 3 Voltage") + "," +
-                            gauge.GetDisplayValue("Cell 4 Voltage") + "," +
-                            gauge.Current.ToString() + "," +
-                            gauge.GetDisplayValue("Relative State of Charge") + "," +
-                            gauge.GetDisplayValue("Absolute State of Charge") + "," +
-                            gauge.GetDisplayValue("LStatus") + "," +
-                            gauge.GetDisplayValue("IT Status") + "," +
-                            gauge.GetDisplayValue("Battery Status") + "," +
-                            gauge.GetDisplayValue("Manufacturing Status") + "," +
-                            gauge.GetDisplayValue("Operation Status A") + "," +
-                            gauge.GetDisplayValue("Operation Status B") + "," +
-                            gauge.GetDisplayValue("Safety Status A+B") + "," +
-                            gauge.GetDisplayValue("Safety Status C+D");
+            string item = "";
+            foreach (var prm in lst_param) {
+                item += $"{ gauge.GetDisplayValue(prm) },";
+            }
+
             gauge.ReadDeviceMutex.ReleaseMutex();
             WriteLine("gauge", item);
         }

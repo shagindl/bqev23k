@@ -53,7 +53,7 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="tc">Taper current to end task, in [mA].</param>
-        public ChargeTask(int tc, int end_hold_time = 1 * 60)
+        public ChargeTask(int tc, int end_hold_time = 0)
         {
             startTime = DateTime.Now;
             taperCurrent = tc;

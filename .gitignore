@@ -337,7 +337,6 @@ ASALocalRun/
 /BQEV23K/*.bak
 /BQEV23K/Resources/1
 *.bak
-/Utils/LogParser/*.xlsx
 /Utils/LogParser/*.zip
 /Utils/GPCCHEM/tmp
 /Utils/GPCCHEM/ChemUpdate954

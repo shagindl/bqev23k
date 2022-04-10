@@ -23,8 +23,8 @@ namespace BQEV23K
     /// </summary>
     public partial class MainWindow : Window, IDisposable
     {
-        private const int CmdExecDelayMilliseconds = 2000;
-        private const int ResetCmdExecDelayMilliseconds = 4000;
+        private const int CmdExecDelayMilliseconds = 4000;
+        private const int ResetCmdExecDelayMilliseconds = 8000;
         private PlotViewModel plot;
         private EV23K board;
         private M5010.MARK_5010 Mark5010;
@@ -51,7 +51,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.0.7.3 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.2.0.1 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -140,6 +140,13 @@ namespace BQEV23K
             ctUpdatePlot.Cancel();
             ctDataLog.Cancel();
 
+            if(ThreadConnectionM5010 != null)
+                ThreadConnectionM5010.Join();
+            if (ThreadUpdatePlot != null)
+                ThreadUpdatePlot.Join();
+            if (ThreadDataLog != null)
+                ThreadDataLog.Join();
+
             board.Disconnect();
         }
 
@@ -185,7 +192,7 @@ namespace BQEV23K
         /// </summary>
         /// <param name="sender">Not used.</param>
         /// <param name="e">Not used</param>
-        bool fInUpdateGui = false;
+        bool fInUpdateGui = false, fSingleUpdateGui = false;
         public void UpdateGui(object sender, System.EventArgs e)
         {
             if (fInUpdateGui) return;
@@ -207,8 +214,16 @@ namespace BQEV23K
 
             if (gauge != null)
             {
-                if(gauge.HasSMBusError)
+                if (gauge.HasSMBusError)
                 {
+                    fSingleUpdateGui = false;
+                    LabelGaugeChemID.Content = string.Empty;
+                    RunTimeEmty.Content = string.Empty;
+                    AvgTimeEmty.Content = string.Empty;
+                    AvgTimeFull.Content = string.Empty;
+                    ChgCurr.Content = string.Empty;
+                    ChgVolt.Content = string.Empty;
+
                     IconArrows.Source = GetImageSourceFromResource("Arrows-Disabled-48.png");
                     IconGauge.Source = GetImageSourceFromResource("Gauge-Disabled-128.png");
                     LabelGaugeName.Content = LabelGaugeVersion.Text = string.Empty;
@@ -216,6 +231,11 @@ namespace BQEV23K
                }
                 else
                 {
+                    if (!fSingleUpdateGui)
+                    {
+                        LabelGaugeChemID.Content = $"CHEM_ID: {gauge.GetDisplayValue("CHEM_ID")}";
+                    }
+
                     IconArrows.Source = GetImageSourceFromResource("Arrows-48.png");
                     IconGauge.Source = GetImageSourceFromResource("Gauge-128.png");
                     LabelGaugeName.Content = gauge.GetDisplayValue("Device Name");
@@ -226,9 +246,14 @@ namespace BQEV23K
                     s += gauge.GetDisplayValue("FW_BUILD").Replace("0", "");
                     LabelGaugeVersion.Text = s;
 
-                    LabelGaugeVoltage.Content = gauge.GetDisplayValue("Voltage");
+                    LabelGaugeVoltage.Content = $"VBat: {gauge.GetDisplayValue("Voltage")} mV";
+                    LabelGaugeTemperature.Content = $"Temp: { gauge.GetDisplayValue("Temperature")} ºС";
+                    RunTimeEmty.Content = $"RunTimeEmty: {gauge.GetDisplayValue("Run time To Empty")} min";
+                    AvgTimeEmty.Content = $"AvgTimeEmty: {gauge.GetDisplayValue("Average Time to Empty")} min";
+                    AvgTimeFull.Content = $"AvgTimeFull: {gauge.GetDisplayValue("Average Time to Full")} min";
+                    ChgCurr.Content = $"ChgCurr: {gauge.GetDisplayValue("Charging Current")} mA";
+                    ChgVolt.Content = $"ChgVolt: {gauge.GetDisplayValue("Charging Voltage")} mV";
 
-                    LabelGaugeTemperature.Content = gauge.GetDisplayValue("Temperature");
 
                     FlagFC.IsChecked = gauge.FlagFC;
                     FlagFD.IsChecked = gauge.FlagFD;
@@ -350,7 +375,7 @@ namespace BQEV23K
         }
         void LogAddEvent()
         {
-            DataLog = new DataLog_t();
+            DataLog = new DataLog_t(gauge);
             if(gauge != null)
                 gauge.LogWriteEvent += DataLog.WriteMessage;
             if (LogView != null)

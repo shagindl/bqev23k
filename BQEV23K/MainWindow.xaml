@@ -21,6 +21,8 @@
                 <ColumnDefinition Width="128"/>
                 <ColumnDefinition Width="96"/>
                 <ColumnDefinition Width="128"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="160"/>
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
             <Image x:Name="IconEV23K" Source="/Resources/USB-Disabled-128.png" Grid.Row="0" Grid.Column="0"/>
@@ -41,6 +43,18 @@
             <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center">
                 <Label x:Name="LabelGaugeVoltage"/>
                 <Label x:Name="LabelGaugeTemperature"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="LabelGaugeChemID"/>
+                <Label x:Name="RunTimeEmty"/>
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="AvgTimeEmty"/>
+                <Label x:Name="AvgTimeFull"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="ChgCurr"/>
+                <Label x:Name="ChgVolt"/>
             </StackPanel>
         </Grid>
         <TabControl x:Name="tabControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="1">
