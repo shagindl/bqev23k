@@ -66,6 +66,9 @@ namespace BQEV23K
                     heads += $"{ gauge.GetShortName(prm) },";
                     heads_gpc += $"{ gauge.GetShortName(prm) },";
                 }
+                heads = heads.Remove(heads.Length - 1);
+                heads_gpc = heads_gpc.Remove(heads_gpc.Length - 1);
+
                 using (StreamWriter writer = new System.IO.StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
                 {
                     writer.WriteLine($"Device Chemistry ID = {ChemID}");
@@ -128,21 +131,28 @@ namespace BQEV23K
                 string time = DateTime.Now.Subtract(startTime).TotalSeconds.ToString("F1", CultureInfo.CreateSpecificCulture("en-US"));
                 string dts = DateTime.Now.ToString();
 
+                if(item[item.Length - 1] == ',')
+                    item = item.Remove(item.Length - 1);
+                item += "\r\n";
+
                 Mutex.WaitOne();
                 try
                 {
                     
                     if(info == "gauge")
                     {
-                        using (StreamWriter writer_gpc = new StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
+                        //using (StreamWriter writer_gpc = new StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
                         {
-                            writer_gpc.WriteLineAsync($"{time},{dts},{item}");
+                            //writer_gpc.WriteLineAsync($"{time},{dts},{item}");
+                            File.AppendAllText($@"Logs\{ NameGpcFile }", $"{time},{dts},{item}");
                         }
                         info += ",";
                     }
-                    using (StreamWriter writer = new StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
+                    //using (StreamWriter writer = new StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
+                    //using (StreamWriter writer = new File.AppendAllText($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
                     {
-                        writer.WriteLineAsync($"{time},{dts},{info}{item}");
+                        File.AppendAllText($@"Logs\{ NameFile }", $"{time},{dts},{info}{item}");
+                        //writer.WriteLineAsync($"{time},{dts},{info}{item}");
                     }
                 }
                 catch (Exception ex)
@@ -160,6 +170,7 @@ namespace BQEV23K
             foreach (var prm in lst_param) {
                 item += $"{ gauge.GetDisplayValue(prm) },";
             }
+            //item = item.Remove(item.Length - 1) + "\r\n"; 
 
             gauge.ReadDeviceMutex.ReleaseMutex();
             WriteLine("gauge", item);

@@ -51,7 +51,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.2.0.1 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.2.2.1 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -418,7 +418,7 @@ namespace BQEV23K
             int.TryParse(CfgCycleTermVolt.Text, out termVoltage);
 
             int ctv = (termVoltage / cellCount);
-            if (termVoltage <= 0 || (ctv < 2500) || (termVoltage / cellCount > 4200))
+            if (termVoltage <= 0 || (ctv < 2000) || (termVoltage / cellCount > 4200))
             {
                 LogView.AddEntry("Invalid termination voltage! (" + ctv.ToString() + "mV/cell)");
                 return;
@@ -546,7 +546,7 @@ namespace BQEV23K
                     new RelaxTask(relaxTimeDischarge),
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge),
-                    new DischargeTask(termVoltage, 1.0),
+                    new DischargeTask(termVoltage, 1.1),
                     new RelaxTask(relaxTimeDischarge),
                 };
                 
@@ -556,7 +556,7 @@ namespace BQEV23K
                     tl.AddRange(new GenericTask[]{
                         new ChargeTask(taperCurrent),
                         new RelaxTask(relaxTimeCharge),
-                        new DischargeTask(termVoltage, 1.0),
+                        new DischargeTask(termVoltage, 1.1),
                         new RelaxTask(relaxTimeDischarge),
                     });
                 }

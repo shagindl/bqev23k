@@ -12,7 +12,24 @@ namespace BQEV23K
     {
         private const int GaugeDataPollingInterval = 100;
         private readonly List<string> singleReadGaugeDataRegisters = new List<string> {
-            "Device Chemistry"
+            "Device Chemistry",
+            "Manufacturer Name",
+            // --
+            //"Absolute State of Charge",
+            //"Run time To Empty",
+            //"Average Time to Empty",
+            //"Average Time to Full",
+            //"Charging Current",
+            //"Charging Voltage",
+
+            //"QMax Passed Q","QMax Time",
+            //"DOD0 Passed Q","DOD0 Passed E","DOD0 Time",
+            //"Cell 1 QMax","Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",
+            //"Cell 1 QMax DOD0","Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",
+            //"Cell 1 Raw DOD","Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",
+            //"Cell 1 DOD0","Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",
+            //"Cell 1 DODEOC","Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",
+            //"Cell 1 Grid","Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",
         };
         
 
@@ -22,13 +39,12 @@ namespace BQEV23K
             "Current",
             "LStatus",
             "IT Status",
-            "Manufacturer Name",
             "Battery Status",
             "Manufacturing Status",
             "Operation Status A",
             "Operation Status B",
             "Relative State of Charge",
-            "Absolute State of Charge",
+            //"Absolute State of Charge",
 
             "Charging Status","Gauging Status",
             "Safety Status A+B", "Safety Status C+D",
@@ -36,20 +52,20 @@ namespace BQEV23K
             "PF Status A+B","PF Status C+D",
             "PF Alert A+B","PF Alert C+D",
 
-            "Run time To Empty",
-            "Average Time to Empty",
-            "Average Time to Full",
-            "Charging Current",
-            "Charging Voltage",
+            //"Run time To Empty",
+            //"Average Time to Empty",
+            //"Average Time to Full",
+            //"Charging Current",
+            //"Charging Voltage",
 
-            "QMax Passed Q","QMax Time",
-            "DOD0 Passed Q","DOD0 Passed E","DOD0 Time",
-            "Cell 1 QMax","Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",
-            "Cell 1 QMax DOD0","Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",
-            "Cell 1 Raw DOD","Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",
-            "Cell 1 DOD0","Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",
-            "Cell 1 DODEOC","Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",
-            "Cell 1 Grid","Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",
+            "QMax Passed Q",/*"QMax Time",*/
+            "DOD0 Passed Q","DOD0 Passed E",/*"DOD0 Time",*/
+            "Cell 1 QMax",/*"Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",*/
+            "Cell 1 QMax DOD0", /*"Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",*/
+            "Cell 1 Raw DOD", /*"Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",*/
+            "Cell 1 DOD0",/*"Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",*/
+            "Cell 1 DODEOC",/*"Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",*/
+            "Cell 1 Grid",/*"Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",*/
 
             "Cell 1 Voltage",
             "Cell 2 Voltage",
