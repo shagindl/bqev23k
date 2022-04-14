@@ -17,5 +17,8 @@
     <Setting Name="DischargeRelaxHours" Type="System.String" Scope="User">
       <Value Profile="(Default)">5.1</Value>
     </Setting>
+    <Setting Name="IP_Load" Type="System.String" Scope="User">
+      <Value Profile="(Default)">192.168.14.20</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

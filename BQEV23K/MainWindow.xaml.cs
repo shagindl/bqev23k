@@ -51,7 +51,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.2.2.1 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.4.0.2 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -83,6 +83,7 @@ namespace BQEV23K
             CfgCycleTermVolt.Text = Properties.Settings.Default.TerminationVoltage;
             CfgCycleChargeRelaxHours.Text = Properties.Settings.Default.ChargeRelaxHours;
             CfgCycleDischargeRelaxHours.Text = Properties.Settings.Default.DischargeRelaxHours;
+            IP_Load.Text = Properties.Settings.Default.IP_Load;
 
             try
             {
@@ -223,6 +224,8 @@ namespace BQEV23K
                     AvgTimeFull.Content = string.Empty;
                     ChgCurr.Content = string.Empty;
                     ChgVolt.Content = string.Empty;
+                    LStatus.Content = string.Empty;
+                    RSOC.Content = string.Empty;
 
                     IconArrows.Source = GetImageSourceFromResource("Arrows-Disabled-48.png");
                     IconGauge.Source = GetImageSourceFromResource("Gauge-Disabled-128.png");
@@ -253,18 +256,21 @@ namespace BQEV23K
                     AvgTimeFull.Content = $"AvgTimeFull: {gauge.GetDisplayValue("Average Time to Full")} min";
                     ChgCurr.Content = $"ChgCurr: {gauge.GetDisplayValue("Charging Current")} mA";
                     ChgVolt.Content = $"ChgVolt: {gauge.GetDisplayValue("Charging Voltage")} mV";
-
+                    LStatus.Content = $"LStatus: {gauge.GetDisplayValue("LStatus")}";
+                    RSOC.Content =  $"RSOC: {gauge.GetDisplayValue("Relative State of Charge")}";
 
                     FlagFC.IsChecked = gauge.FlagFC;
                     FlagFD.IsChecked = gauge.FlagFD;
                     FlagGAUGE_EN.IsChecked = gauge.FlagGAUGE_EN;
                     FlagQEN.IsChecked = gauge.FlagQEN;
                     FlagQMAX.IsChecked = gauge.FlagQMAX;
+                    FlagVDQ.IsChecked = gauge.FlagVDQ;
                     FlagRDIS.IsChecked = gauge.FlagRDIS;
                     FlagREST.IsChecked = gauge.FlagREST;
                     FlagVOK.IsChecked = gauge.FlagVOK;
                     FlagCHG.IsChecked = gauge.FlagCHG;
                     FlagDSG.IsChecked = gauge.FlagDSG;
+                    FlagFET_EN.IsChecked = gauge.FlagFET_EN;
                     FlagOCVFR.IsChecked = gauge.FlagOCV;
 
                     CfgBattChemID.Text = gauge.GetDisplayValue("CHEM_ID");
@@ -375,7 +381,7 @@ namespace BQEV23K
         }
         void LogAddEvent()
         {
-            DataLog = new DataLog_t(gauge);
+            DataLog = new DataLog_t(gauge, $"{CycleType.ProductionCycle}");
             if(gauge != null)
                 gauge.LogWriteEvent += DataLog.WriteMessage;
             if (LogView != null)
@@ -436,22 +442,31 @@ namespace BQEV23K
                 LogView.AddEntry("Invalid taper current!");
                 return;
             }
-
             /* See TI SLUA848, chapter 4.2.1 */
             LogView.AddEntry("Preparing...");
+            bool FlagFET_EN_valid = false;
+            if (selectedCycleType == CycleType.DischargeChargeTask)
+                FlagFET_EN_valid = true;
+            else
+                FlagFET_EN_valid = false;
+
             /* Clear FET_EN to be able to set charge and discharge FETs */
-            if (gauge.FlagFET_EN == true)
+            if (gauge.FlagFET_EN != FlagFET_EN_valid)
+            {
                 gauge.CommandToogleFETenable();
-
+            }
             await Task.Delay(CmdExecDelayMilliseconds);
-
-            if (gauge.FlagFET_EN == true)
+            if (gauge.FlagFET_EN != FlagFET_EN_valid)
             {
                 LogView.AddEntry("Failed to clear FET_EN.");
                 return;
             }
+            // --
+            if (selectedCycleType == CycleType.DischargeChargeTask)
+            {
 
-            if (selectedCycleType == CycleType.LearningCycle) { 
+            }
+            else if (selectedCycleType == CycleType.ProductionCycle || selectedCycleType == CycleType.LearningCycle) { 
                 /* Enable gauging mode */
                 if (gauge.FlagGAUGE_EN == false || gauge.FlagQEN == false)
                     gauge.CommandSetGaugeEnable();
@@ -474,8 +489,19 @@ namespace BQEV23K
                     return;
                 }
 
+                int LStatus_valid = 0;
+                if (selectedCycleType == CycleType.ProductionCycle)
+                    LStatus_valid = 0x06;
+                else if (selectedCycleType == CycleType.LearningCycle)
+                    LStatus_valid = 0x04;
+                else
+                {
+                    LogView.AddEntry("Error: selectedCycleType not defined!.");
+                    return;
+                }
+
                 int LStatus = (int)gauge.GetReadValue("LStatus");
-                if (LStatus != 0x04)
+                if (LStatus != LStatus_valid)
                 {
                     var mess = @"Error: LStatus != 0x04 " + @"[0x" + LStatus.ToString("X2") + @"].";
                     LogView.AddEntry(mess);
@@ -496,20 +522,28 @@ namespace BQEV23K
                     return;
                 }
             }
-
-            if (gauge.FlagDSG == false)
-                gauge.CommandToggleDischargeFET();
-
-            /* Set charge and discharge FETs */
-            if (gauge.FlagCHG == false)
-                gauge.CommandToggleChargeFET();
-
-            await Task.Delay(CmdExecDelayMilliseconds);
-
-            if (gauge.FlagCHG == false && gauge.FlagDSG == false)
+            else
             {
-                LogView.AddEntry("Failed to set charge and discharge FETs.");
+                LogView.AddEntry("Unknown mode.");
                 return;
+            }
+
+            if (selectedCycleType != CycleType.DischargeChargeTask)
+            {
+                if (gauge.FlagDSG == false)
+                    gauge.CommandToggleDischargeFET();
+
+                /* Set charge and discharge FETs */
+                if (gauge.FlagCHG == false)
+                    gauge.CommandToggleChargeFET();
+
+                await Task.Delay(CmdExecDelayMilliseconds);
+
+                if (gauge.FlagCHG == false && gauge.FlagDSG == false)
+                {
+                    LogView.AddEntry("Failed to set charge and discharge FETs.");
+                    return;
+                }
             }
 
             LogView.AddEntry("Device preparation successful.");
@@ -530,16 +564,40 @@ namespace BQEV23K
             else
                 relaxTimeDischarge = 300;
 
+            Mark5010.IP = IP_Load.Text;
+
             Properties.Settings.Default.CellCount = CfgCycleCellCount.Text;
             Properties.Settings.Default.TaperCurrent = CfgCycleTaperCurr.Text;
             Properties.Settings.Default.TerminationVoltage = CfgCycleTermVolt.Text;
             Properties.Settings.Default.ChargeRelaxHours = CfgCycleChargeRelaxHours.Text;
             Properties.Settings.Default.DischargeRelaxHours = CfgCycleDischargeRelaxHours.Text;
+            Properties.Settings.Default.IP_Load = IP_Load.Text;
             Properties.Settings.Default.Save();
 
             List<GenericTask> tl = new List<GenericTask>();
 
-            if (selectedCycleType == CycleType.LearningCycle)
+            if (selectedCycleType == CycleType.DischargeChargeTask)
+            {
+                tl = new List<GenericTask> {
+                    new DischargeTask(termVoltage),
+                    new RelaxTask(relaxTimeDischarge, true),
+                    new ChargeTask(taperCurrent),
+                    new RelaxTask(relaxTimeCharge, true),
+                };
+            }
+            else if (selectedCycleType == CycleType.ProductionCycle)
+            {
+                tl = new List<GenericTask> {
+                    new DischargeTask(termVoltage),
+                    new RelaxTask(relaxTimeDischarge),
+                    new ChargeTask(taperCurrent),
+                    new RelaxTask(relaxTimeCharge),
+                    new DischargeTask(termVoltage, -1, 0x0E),
+                    //new RelaxTask(relaxTimeDischarge),
+                    //new ChargeTask(taperCurrent),
+                };
+            }
+            else if (selectedCycleType == CycleType.LearningCycle)
             {
                 tl = new List<GenericTask> {
                     new DischargeTask(termVoltage, 4.0),
@@ -599,11 +657,32 @@ namespace BQEV23K
         /// <param name="e"></param>
         private void OnCycleCompleted(object sender, EventArgs e)
         {
+            if (selectedCycleType == CycleType.ProductionCycle)
+            {
+                if (gauge.FlagFET_EN == false)
+                {
+                    gauge.CommandToogleFETenable();
+                }
+                Task.Delay(CmdExecDelayMilliseconds).Wait();
+                if (gauge.FlagFET_EN == false)
+                {
+                    LogView.AddEntry("Failed to set FET_EN.");
+                }
+            }
             // Add trophy here.
             ctUpdatePlot.Cancel();
             ctDataLog.Cancel();
+            ctConnectionM5010.Cancel();
+
             ButtonCycleStart.IsEnabled = true;
             ButtonCycleCancel.IsEnabled = false;
+            // --
+            if (ThreadConnectionM5010 != null)
+                ThreadConnectionM5010.Join();
+            if (ThreadUpdatePlot != null)
+                ThreadUpdatePlot.Join();
+            if (ThreadDataLog != null)
+                ThreadDataLog.Join();
             // --
             if (DataLog != null)
             {
@@ -671,6 +750,12 @@ namespace BQEV23K
 
             switch (selectedCycleType)
             {
+                case CycleType.ProductionCycle:
+                    TabItemCycle.Header = "Production Cycle";
+                    break;
+                case CycleType.DischargeChargeTask:
+                    TabItemCycle.Header = "DischargeCharge Cycle";
+                    break;
                 case CycleType.LearningCycle:
                     TabItemCycle.Header = "Learning Cycle";
                     break;
@@ -678,6 +763,7 @@ namespace BQEV23K
                     TabItemCycle.Header = "GPC Cycle";
                     break;
                 default:
+                    TabItemCycle.Header = "selectedCycleType not defined.";
                     return;
             }
 
@@ -696,13 +782,22 @@ namespace BQEV23K
         private void CycleTypeSelected(object sender, RoutedEventArgs e)
         {
             System.Windows.Controls.RadioButton rb = (System.Windows.Controls.RadioButton)sender;
-            if(rb.Name == "ModeLearningCycle")
+
+            if (rb.Name == "ModeDischargeChargeCycle")
+            {
+                selectedCycleType = CycleType.DischargeChargeTask;
+            }
+            else if (rb.Name == "ModeLearningCycle")
             {
                 selectedCycleType = CycleType.LearningCycle;
             }
             else if(rb.Name == "ModeGpcCycle")
             {
                 selectedCycleType = CycleType.GpcCycle;
+            }
+            else if (rb.Name == "ModeProductionCycle")
+            {
+                selectedCycleType = CycleType.ProductionCycle;
             }
             else
             {

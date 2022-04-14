@@ -82,5 +82,17 @@ namespace BQEV23K.Properties {
                 this["DischargeRelaxHours"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("192.168.14.20")]
+        public string IP_Load {
+            get {
+                return ((string)(this["IP_Load"]));
+            }
+            set {
+                this["IP_Load"] = value;
+            }
+        }
     }
 }

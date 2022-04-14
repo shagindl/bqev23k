@@ -40,7 +40,7 @@ namespace BQEV23K
         /// <summary>
         /// Constructor
         /// </summary>
-        public DataLog_t(GaugeInfo gauge)
+        public DataLog_t(GaugeInfo gauge, string cycle_type)
         {
             startTime = DateTime.Now;
             Mutex.WaitOne();
@@ -55,9 +55,9 @@ namespace BQEV23K
                 //ChemID = ChemID.Substring(0, ChemID.IndexOf('\0'));
                 do {
                     DTS = DateTime.Now.ToString().Replace(':', '_');
-                    NameFile = $"{DTS} Log_ChemID[{ChemID}].csv";
+                    NameFile = $"{DTS} Log.{cycle_type}_ChemID[{ChemID}].csv";
                 } while (File.Exists(@"Logs\" + NameFile));
-                NameGpcFile = $"{DTS} GpcLog_ChemID[{ChemID}].csv";
+                NameGpcFile = $"{DTS} GpcLog.{cycle_type}_ChemID[{ChemID}].csv";
 
                 string heads = "Time[s],DataTime,Info,";
                 string heads_gpc = "Time[s],DataTime,";

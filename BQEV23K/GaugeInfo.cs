@@ -53,8 +53,8 @@ namespace BQEV23K
             "PF Alert A+B","PF Alert C+D",
 
             //"Run time To Empty",
-            //"Average Time to Empty",
-            //"Average Time to Full",
+            "Average Time to Empty",
+            "Average Time to Full",
             //"Charging Current",
             //"Charging Voltage",
 
@@ -226,6 +226,13 @@ namespace BQEV23K
             get
             {
                 return sbsItems.SbsRegister.Find(x => x.Caption == "IT Status").SbsBitItems.Find(x => x.SbsCaption == "QMAX").SbsBitValue != 0;
+            }
+        }
+        public bool FlagVDQ
+        {
+            get
+            {
+                return sbsItems.SbsRegister.Find(x => x.Caption == "IT Status").SbsBitItems.Find(x => x.SbsCaption == "VDQ").SbsBitValue != 0;
             }
         }
 

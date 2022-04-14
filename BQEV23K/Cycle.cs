@@ -12,7 +12,9 @@ namespace BQEV23K
     {
         None,
         LearningCycle,
-        GpcCycle
+        GpcCycle,
+        ProductionCycle,
+        DischargeChargeTask
     }
 
     /// <summary>
