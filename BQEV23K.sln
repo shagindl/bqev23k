@@ -1,9 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31729.503
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BQEV23K", "BQEV23K\BQEV23K.csproj", "{4555ED0F-A5DA-49F4-A41F-058C43A6D459}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2E527000-363D-4F91-9A8E-C8DD6B8BCABF} = {2E527000-363D-4F91-9A8E-C8DD6B8BCABF}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AxBQEV23K", "AxBQEV23K\AxBQEV23K.csproj", "{2E527000-363D-4F91-9A8E-C8DD6B8BCABF}"
 EndProject
@@ -13,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DriverM5010", "MARK-5010\DriverM5010.csproj", "{11498F44-0D6E-4268-8727-C614CFE85102}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,8 +33,15 @@ Global
 		{2E527000-363D-4F91-9A8E-C8DD6B8BCABF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E527000-363D-4F91-9A8E-C8DD6B8BCABF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E527000-363D-4F91-9A8E-C8DD6B8BCABF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11498F44-0D6E-4268-8727-C614CFE85102}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11498F44-0D6E-4268-8727-C614CFE85102}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11498F44-0D6E-4268-8727-C614CFE85102}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11498F44-0D6E-4268-8727-C614CFE85102}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1C17BE4D-F258-4DBC-B08F-99B591125D17}
 	EndGlobalSection
 EndGlobal

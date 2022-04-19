@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bcfg name="bq40z80" docgroup="bq40z80">
+	<bcfgInfo>
+		<bcfgxBaseAddr>0x4000</bcfgxBaseAddr>
+	</bcfgInfo>
+  <bcfgItem>
+        <class>Settings</class>
+        <subclass>Configuration</subclass>
+        <caption>Cell Configuration</caption>
+        <offset>3333</offset>
+        <length>1</length>
+        <datatype>B</datatype>
+        <displaytype>hhhh</displaytype>
+        <default>07</default>
+        <min>0</min>
+        <max>0x07</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>hex</unit>
+        <isbitfield>true</isbitfield>
+        <fields>
+            <bit7>RSVD</bit7>
+            <bit6>RSVD</bit6>
+            <bit5>RSVD</bit5>
+            <bit4>RSVD</bit4>
+            <bit3>RSVD</bit3>
+            <bit2>CC2</bit2>
+            <bit1>CC1</bit1>
+            <bit0>CC0</bit0>
+        </fields>
+        <munit>hex</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Gas Gauging</class>
+        <subclass>IT Cfg</subclass>
+        <caption>Term Voltage</caption>
+        <offset>2641</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>21000</default>
+        <min>0</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mV</unit>
+        <munit>mV</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Advanced Charge Algorithm</class>
+        <subclass>Termination Config</subclass>
+        <caption>Charge Term Voltage</caption>
+        <offset>3253</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>75</default>
+        <min>0</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mV</unit>
+        <munit>mV</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Advanced Charge Algorithm</class>
+        <subclass>Termination Config</subclass>
+        <caption>Charge Term Taper Current</caption>
+        <offset>3315</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>250</default>
+        <min>0</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mA</unit>
+        <munit>mA</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Gas Gauging</class>
+        <subclass>Current Thresholds</subclass>
+        <caption>Dsg Current Threshold</caption>
+        <offset>3344</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>100</default>
+        <min>-32768</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mA</unit>
+        <munit>mA</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Gas Gauging</class>
+        <subclass>Current Thresholds</subclass>
+        <caption>Chg Current Threshold</caption>
+        <offset>3346</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>50</default>
+        <min>-32768</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mA</unit>
+        <munit>mA</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Gas Gauging</class>
+        <subclass>Design</subclass>
+        <caption>Design Voltage</caption>
+        <offset>2925</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>14400</default>
+        <min>0</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mV</unit>
+        <munit>mV</munit>
+    </bcfgItem>
+    <bcfgItem>
+        <class>Gas Gauging</class>
+        <subclass>Design</subclass>
+        <caption>Design Capacity mAh</caption>
+        <offset>2921</offset>
+        <length>2</length>
+        <datatype>I</datatype>
+        <displaytype>ddd</displaytype>
+        <default>4400</default>
+        <min>100</min>
+        <max>32767</max>
+        <readformula>x</readformula>
+        <writeformula>x</writeformula>
+        <unit>mAh</unit>
+        <munit>mAh</munit>
+    </bcfgItem>
+</bcfg>

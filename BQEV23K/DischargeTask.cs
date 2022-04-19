@@ -13,8 +13,10 @@ namespace BQEV23K
     {
         private const int TerminationHoldOffMilliseconds = 5000;
         private int terminateVoltage;
+        private double currentDeisharge = -1, current;
         private bool isCompleted = false;
         private DateTime startTime;
+        private double LStatus_complite = -1;
 
         #region Properties
         /// <summary>
@@ -55,10 +57,25 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="tv">Termination voltage to end task.</param>
-        public DischargeTask(int tv)
+        public DischargeTask(int tv, double _current, double LStatus = -1)
+        {
+            currentDeisharge = _current;
+            LStatus_complite = LStatus;
+
+            Init(tv);
+        }
+        public DischargeTask(int tv, double _current = 4.0)
+        {
+            currentDeisharge = _current;
+            LStatus_complite = -1;
+
+            Init(tv);
+        }
+        private void Init(int tv)
         {
             startTime = DateTime.Now;
             terminateVoltage = tv;
+            current = -1.0;
         }
 
         /// <summary>
@@ -88,9 +105,24 @@ namespace BQEV23K
                     {
                         isCompleted = true;
                     }
+                    if(LStatus_complite >= 0 && LStatus_complite == gaugeInfo.GetReadValue("LStatus"))
+                    {
+                        isCompleted = true;
+                    }
                 }
             }
             return isCompleted;
+        }
+        override public void SetCurrent(object _m5010)
+        {
+            var m5010 = (M5010.MARK_5010)_m5010;
+
+            if(currentDeisharge >= 0 && current != currentDeisharge)
+            {
+                m5010.SetCurrent(currentDeisharge);
+
+                current = currentDeisharge;
+            }
         }
     }
 }

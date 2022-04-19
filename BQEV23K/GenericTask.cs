@@ -69,5 +69,9 @@ namespace BQEV23K
         {
             return true;
         }
+        virtual public void SetCurrent(object m5010)
+        {
+
+        }
     }
 }

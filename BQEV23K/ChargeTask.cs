@@ -9,10 +9,10 @@ namespace BQEV23K
     {
         private const int TerminationHoldOffMilliseconds = 10000;
         private const int ChargeStartedCurrentThresholdMilliamps = 30;
-        private int taperCurrent;
+        private int taperCurrent, EndHoldTime;
         private bool isCompleted = false;
         private bool currentHasStarted = false;
-        private DateTime startTime;
+        private DateTime startTime, HoldTime;
 
         #region Properties
         /// <summary>
@@ -53,10 +53,12 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="tc">Taper current to end task, in [mA].</param>
-        public ChargeTask(int tc)
+        public ChargeTask(int tc, int end_hold_time = 0)
         {
             startTime = DateTime.Now;
             taperCurrent = tc;
+            EndHoldTime = end_hold_time;
+            HoldTime = startTime;
         }
 
         /// <summary>
@@ -81,17 +83,28 @@ namespace BQEV23K
             {
                 if(currentHasStarted)
                 {
-                    if(gaugeInfo.Current < taperCurrent && gaugeInfo.FlagFC == true)
+                    if (gaugeInfo.Current < taperCurrent && gaugeInfo.FlagFC == true)
                     {
-                        isCompleted = true;
+                        if(HoldTime == startTime)
+                        {
+                            HoldTime = DateTime.Now;
+                        }
+                        if (DateTime.Now.Subtract(HoldTime).TotalSeconds >= EndHoldTime)
+                        {
+                            isCompleted = true;
+                        }
                     }
-                    else if (DateTime.Now.Subtract(startTime).TotalMilliseconds >= TerminationHoldOffMilliseconds && gaugeInfo.Current < taperCurrent)
-                    {
-                        isCompleted = false;
-                    }
-                    else if (gaugeInfo.Current < taperCurrent && gaugeInfo.FlagFC == false)
-                    {
-                        isCompleted = false;
+                    else {
+                        HoldTime = startTime;
+
+                        if (DateTime.Now.Subtract(startTime).TotalMilliseconds >= TerminationHoldOffMilliseconds && gaugeInfo.Current < taperCurrent)
+                        {
+                            isCompleted = false;
+                        }
+                        else if (gaugeInfo.Current < taperCurrent && gaugeInfo.FlagFC == false)
+                        {
+                            isCompleted = false;
+                        }
                     }
                 }
                 else if(DateTime.Now.Subtract(startTime).TotalMilliseconds >= TerminationHoldOffMilliseconds)

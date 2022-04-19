@@ -21,6 +21,9 @@
                 <ColumnDefinition Width="128"/>
                 <ColumnDefinition Width="96"/>
                 <ColumnDefinition Width="128"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="160"/>
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
             <Image x:Name="IconEV23K" Source="/Resources/USB-Disabled-128.png" Grid.Row="0" Grid.Column="0"/>
@@ -39,8 +42,26 @@
             <Label x:Name="LabelGaugeName" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Top"/>
             <TextBlock x:Name="LabelGaugeVersion" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
             <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center">
-                <Label x:Name="LabelGaugeVoltage"/>
-                <Label x:Name="LabelGaugeTemperature"/>
+                <Label x:Name="LabelGaugeVoltage" Content="LabelGaugeVoltage"/>
+                <Label x:Name="LabelGaugeTemperature" Content="LabelGaugeTemperature"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="LabelGaugeChemID" Content="LabelGaugeChemID"/>
+                <Label x:Name="RunTimeEmty" Content="RunTimeEmty"/>
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="AvgTimeEmty" Content="AvgTimeEmty"/>
+                <Label x:Name="AvgTimeFull" Content="AvgTimeFull"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="4" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="RSOC" Content="RSOC"/>
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="5" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="ChgCurr" Content="ChgCurr"/>
+                <Label x:Name="ChgVolt" Content="ChgVolt"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="5" Orientation="Vertical" VerticalAlignment="Center">
+                <Label x:Name="LStatus" Content="LStatus"/>
             </StackPanel>
         </Grid>
         <TabControl x:Name="tabControl" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="1">
@@ -48,7 +69,9 @@
                 <WrapPanel Orientation="Vertical">
                     <GroupBox Header="Select Type">
                         <StackPanel Orientation="Horizontal">
-                            <RadioButton Name="ModeLearningCycle" Content="Learning Cycle" Margin="10,0" Checked="CycleTypeSelected" IsChecked="True"/>
+                            <RadioButton x:Name="ModeProductionCycle" Content="Production" Margin="10,0" Checked="CycleTypeSelected" IsChecked="True"/>
+                            <RadioButton x:Name="ModeDischargeChargeCycle" Content="DischargeCharge" Checked="CycleTypeSelected"/>
+                            <RadioButton Name="ModeLearningCycle" Content="Learning Cycle" Checked="CycleTypeSelected"/>
                             <RadioButton Name="ModeGpcCycle" Content="GPC Cycle" Checked="CycleTypeSelected"/>
                         </StackPanel>
                     </GroupBox>
@@ -99,6 +122,7 @@
                             <local:LabelledTextboxCheck x:Name="CfgCycleTermVolt" Label="Termination Voltage" Unit="mV" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleDischargeRelaxHours" Label="Discharge Relax Time" Unit="Hours" Text="5" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleChargeRelaxHours" Label="Charge Relax Time" Unit="Hours" Text="2" HorizontalAlignment="Left" Width="380"/>
+                            <local:LabelledTextboxCheck x:Name="IP_Load" Margin="0,20,0,0" Label="IP Load" Unit="" Text="192.168.14.19" HorizontalAlignment="Left" Width="380"/>
                         </local:LayoutGroup>
                     </GroupBox>
                     <Image Name="ConfigHelpImage"  Width="580" HorizontalAlignment="Left" VerticalAlignment="Top"/>
@@ -120,12 +144,15 @@
                                 <local:LedControl x:Name="FlagREST" Height="24" IsChecked="False" Label="REST"/>
                                 <local:LedControl x:Name="FlagRDIS" Height="24" IsChecked="False" Label="RDIS"/>
                                 <local:LedControl x:Name="FlagFC" Height="24" IsChecked="False" Label="FC"/>
+                                <local:LedControl x:Name="FlagFD" Height="24" IsChecked="False" Label="FD"/>
                                 <local:LedControl x:Name="FlagOCVFR" Height="24" IsChecked="False" Label="OCVFR"/>
                                 <local:LedControl x:Name="FlagQMAX" Height="24" IsChecked="False" Label="QMAX"/>
+                                <local:LedControl x:Name="FlagVDQ" Height="24" IsChecked="False" Label="VDQ"/>
                                 <local:LedControl x:Name="FlagQEN" Height="24" IsChecked="False" Label="QEN"/>
                                 <local:LedControl x:Name="FlagGAUGE_EN" Height="24" IsChecked="False" Label="GAUGE_EN"/>
                                 <local:LedControl x:Name="FlagCHG" Height="24" IsChecked="False" Label="CHG"/>
                                 <local:LedControl x:Name="FlagDSG" Height="24" IsChecked="False" Label="DSG"/>
+                                <local:LedControl x:Name="FlagFET_EN" Height="24" IsChecked="False" Label="FET_EN"/>
                             </StackPanel>
                             <StackPanel DockPanel.Dock="Right" Width="100">
                                 <Button Name="ButtonCycleStart" Margin="5" Click="ButtonCycleStart_Click">
@@ -142,10 +169,14 @@
                                 </Button>
                             </StackPanel>
                             <WrapPanel DockPanel.Dock="Left" Orientation="Vertical">
-                                <Label x:Name="LearningTimeLabel" HorizontalAlignment="Left" Width="200"/>
-                                <Label x:Name="LearningVoltageLabel" HorizontalAlignment="Left" Width="200"/>
-                                <Label x:Name="LearningCurrentLabel" HorizontalAlignment="Left" Width="200"/>
-                                <Label x:Name="LearningTemperatureLabel" HorizontalAlignment="Left" Width="200"/>
+                                <Label x:Name="LearningTimeLabel" HorizontalAlignment="Left" Width="152"/>
+                                <Label x:Name="LearningVoltageLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningCurrentLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningTemperatureLabel" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage1Label" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage2Label" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage3Label" HorizontalAlignment="Left" Width="150"/>
+                                <Label x:Name="LearningVoltage4Label" HorizontalAlignment="Left" Width="150"/>
                             </WrapPanel>
                         </DockPanel>
                     </GroupBox>

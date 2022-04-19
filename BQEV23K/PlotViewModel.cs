@@ -5,6 +5,7 @@ using System.ComponentModel;
 using OxyPlot.Axes;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BQEV23K
 {
@@ -76,6 +77,10 @@ namespace BQEV23K
             {
                 Position = AxisPosition.Bottom,
                 StringFormat = "HH:mm:ss",
+                MinorGridlineStyle = LineStyle.Dot,
+                MinorGridlineColor = OxyColors.LightBlue,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColors.LightBlue,
                 Key = "TimeAxis"
             };
             model.Axes.Add(xAxis);
@@ -84,6 +89,13 @@ namespace BQEV23K
             {
                 Position = AxisPosition.Left,
                 Key = "VoltageAxis",
+                MinorGridlineStyle = LineStyle.Dot,
+                MinorGridlineColor = OxyColors.LightBlue,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColors.LightBlue,
+                //MajorTickSize = 1000,
+                //MinorTickSize = 100,
+                //MajorStep = 1000,
                 AxisDistance = 70,
                 AxisTitleDistance = -60,
                 AxislineStyle = LineStyle.Solid,
@@ -101,6 +113,9 @@ namespace BQEV23K
                 Key = "CurrentAxis",
                 AxisDistance = 0,
                 AxisTitleDistance = -5,
+                //MajorTickSize = 100,
+                //MinorTickSize = 10,
+                //MajorStep = 1000,
                 AxislineStyle = LineStyle.Solid,
                 TextColor = OxyColors.Red,
                 TicklineColor = OxyColors.Red,
@@ -114,12 +129,13 @@ namespace BQEV23K
             {
                 Position = AxisPosition.Right,
                 Key = "TempAxis",
+                //MajorStep = 5,
                 AxisDistance = 0,
                 AxisTitleDistance = 0,
                 AxislineStyle = LineStyle.Solid,
-                TextColor = OxyColors.Orange,
-                TicklineColor = OxyColors.Orange,
-                TitleColor = OxyColors.Orange,
+                TextColor = OxyColors.Green,
+                TicklineColor = OxyColors.Green,
+                TitleColor = OxyColors.Green,
                 Title = "Temperature",
                 Unit = "°C"
             };
@@ -147,7 +163,7 @@ namespace BQEV23K
                 ItemsSource = temperature,
                 YAxisKey = "TempAxis",
                 XAxisKey = "TimeAxis",
-                Color = OxyColors.Orange,
+                Color = OxyColors.Green,
             };
             model.Series.Add(series);
 
@@ -162,6 +178,20 @@ namespace BQEV23K
         protected void RaisePropertyChanged(string property)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
+        }
+        public async void Output(int _Voltage, int _Current, double _Temperature)
+        {
+            await Task.Run(() =>
+            {
+                lock (Plot1.SyncRoot)
+                {
+                    Voltage = _Voltage;
+                    Current = _Current;
+                    Temperature = _Temperature;
+                }
+
+                Plot1.InvalidatePlot(true); // Refresh plot view
+            });
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace BQEV23K
 {
@@ -10,6 +11,8 @@ namespace BQEV23K
     public class GpcDataLog
     {
         private DateTime startTime;
+        System.IO.StreamWriter writer_gpc;
+        private System.Threading.Mutex Mutex = new System.Threading.Mutex();
 
         /// <summary>
         /// Constructor
@@ -18,6 +21,7 @@ namespace BQEV23K
         public GpcDataLog(int cellCount)
         {
             startTime = DateTime.Now;
+            Mutex.WaitOne();
             try
             {
                 if(!Directory.Exists("GPC Results"))
@@ -42,14 +46,32 @@ namespace BQEV23K
                 {
                     File.Delete(@"GPC Results\roomtemp_rel_dis_rel.csv");
                 }
-
-                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(@"GPC Results\roomtemp_rel_dis_rel.csv", false, System.Text.Encoding.UTF8))
+                writer_gpc = new System.IO.StreamWriter(new BufferedStream(File.OpenWrite(@"GPC Results\roomtemp_rel_dis_rel.csv"), 1 * 1024 * 1024), System.Text.Encoding.UTF8, 1 * 1024 * 1024, false);
                 {
-                    writer.WriteLine("ElapsedTime,Voltage,AvgCurrent,Temperature");
+                    writer_gpc.WriteLine("ElapsedTime,Voltage,AvgCurrent,Temperature");
                 }
             } catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+            }
+            Mutex.ReleaseMutex();
+        }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (writer_gpc != null)
+                {
+                    writer_gpc.Flush();
+                    writer_gpc.Close();
+                    writer_gpc = null;
+                }
+                Mutex.Dispose();
             }
         }
 
@@ -59,19 +81,22 @@ namespace BQEV23K
         /// <param name="voltage">Battery voltage</param>
         /// <param name="current">Battery current</param>
         /// <param name="temperature">Battery temperature</param>
-        public void WriteLine(int voltage, int current, double temperature)
+        public async void WriteLine(int voltage, int current, double temperature)
         {
-            try
+            await Task.Run(() =>
             {
-                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(@"GPC Results\roomtemp_rel_dis_rel.csv", true, System.Text.Encoding.UTF8))
+                Mutex.WaitOne();
+                try
                 {
-                    writer.WriteLine(DateTime.Now.Subtract(startTime).TotalSeconds.ToString("F1", CultureInfo.CreateSpecificCulture("en-US")) + "," + voltage.ToString() + "," + current.ToString() + "," + temperature.ToString("F1", CultureInfo.CreateSpecificCulture("en-US")));
+                    if(writer_gpc != null)
+                        writer_gpc.WriteLineAsync(DateTime.Now.Subtract(startTime).TotalSeconds.ToString("F1", CultureInfo.CreateSpecificCulture("en-US")) + "," + voltage.ToString() + "," + current.ToString() + "," + temperature.ToString("F1", CultureInfo.CreateSpecificCulture("en-US")));
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                Mutex.ReleaseMutex();
+            });
         }
     }
 }

@@ -331,3 +331,22 @@ ASALocalRun/
 
 # Local History for Visual Studio
 .localhistory/
+/Utils/*.zip
+/Utils/5023.EV2300 Customer Kit (1)/
+/Utils/EV2300 Customer Kit/
+/BQEV23K/*.bak
+/BQEV23K/Resources/1
+*.bak
+/Utils/LogParser/*.zip
+/Utils/GPCCHEM/tmp
+/Utils/GPCCHEM/ChemUpdate954
+/Utils/DeletRepeatLine/*.csv
+
+/Utils/GPCCHEM/*.xlsx
+/Utils/GPCCHEM/GPCPackage
+/Utils/GPCCHEM/*.xmcd
+/Utils/GPCCHEM/*.mcd
+/Utils/GPCCHEM/*.xls
+/Utils/GPCCHEM/ChecmID_№1
+/Utils/GPCCHEM/*.csv
+/Utils/GPCCHEM/chemdat6

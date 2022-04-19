@@ -3,19 +3,22 @@
   <Profiles />
   <Settings>
     <Setting Name="CellCount" Type="System.String" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">4</Value>
     </Setting>
     <Setting Name="TaperCurrent" Type="System.String" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">800</Value>
     </Setting>
     <Setting Name="TerminationVoltage" Type="System.String" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">11400</Value>
     </Setting>
     <Setting Name="ChargeRelaxHours" Type="System.String" Scope="User">
-      <Value Profile="(Default)">2</Value>
+      <Value Profile="(Default)">2.1</Value>
     </Setting>
     <Setting Name="DischargeRelaxHours" Type="System.String" Scope="User">
-      <Value Profile="(Default)">5</Value>
+      <Value Profile="(Default)">5.1</Value>
+    </Setting>
+    <Setting Name="IP_Load" Type="System.String" Scope="User">
+      <Value Profile="(Default)">192.168.14.20</Value>
     </Setting>
   </Settings>
 </SettingsFile>

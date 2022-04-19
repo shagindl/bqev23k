@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace BQEV23K
 {
@@ -9,33 +10,85 @@ namespace BQEV23K
     /// </summary>
     public class GaugeInfo : IDisposable
     {
-        private const int GaugeDataPollingInterval = 500;
+        private const int GaugeDataPollingInterval = 100;
+        private readonly List<string> singleReadGaugeDataRegisters = new List<string> {
+            "Device Chemistry",
+            "Manufacturer Name",
+            // --
+            //"Absolute State of Charge",
+            //"Run time To Empty",
+            //"Average Time to Empty",
+            //"Average Time to Full",
+            //"Charging Current",
+            //"Charging Voltage",
+
+            //"QMax Passed Q","QMax Time",
+            //"DOD0 Passed Q","DOD0 Passed E","DOD0 Time",
+            //"Cell 1 QMax","Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",
+            //"Cell 1 QMax DOD0","Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",
+            //"Cell 1 Raw DOD","Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",
+            //"Cell 1 DOD0","Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",
+            //"Cell 1 DODEOC","Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",
+            //"Cell 1 Grid","Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",
+        };
+        
+
         private string[] cyclicReadGaugeDataRegisters = new string[]{
             "Voltage",
             "Temperature",
             "Current",
             "LStatus",
             "IT Status",
-            "Manufacturer Name",
             "Battery Status",
             "Manufacturing Status",
-            "Operation Status A"
+            "Operation Status A",
+            "Operation Status B",
+            "Relative State of Charge",
+            //"Absolute State of Charge",
+
+            "Charging Status","Gauging Status",
+            "Safety Status A+B", "Safety Status C+D",
+            "Safety Alert A+B","Safety Alert C+D",
+            "PF Status A+B","PF Status C+D",
+            "PF Alert A+B","PF Alert C+D",
+
+            //"Run time To Empty",
+            "Average Time to Empty",
+            "Average Time to Full",
+            //"Charging Current",
+            //"Charging Voltage",
+
+            "QMax Passed Q",/*"QMax Time",*/
+            "DOD0 Passed Q","DOD0 Passed E",/*"DOD0 Time",*/
+            "Cell 1 QMax",/*"Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",*/
+            "Cell 1 QMax DOD0", /*"Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",*/
+            "Cell 1 Raw DOD", /*"Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",*/
+            "Cell 1 DOD0",/*"Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",*/
+            "Cell 1 DODEOC",/*"Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",*/
+            "Cell 1 Grid",/*"Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",*/
+
+            "Cell 1 Voltage",
+            "Cell 2 Voltage",
+            "Cell 3 Voltage",
+            "Cell 4 Voltage",
         };
 
         private EV23K EV23KBoard;
         private SbsItems sbsItems;
         private BcfgItems bcfgItems;
         private CancellationTokenSource cancelSource;
-        private CancellationToken cancelToken;
-        private int voltage = 0;
+        private int voltage = 0, voltage_Cell1 = 0, voltage_Cell2 = 0, voltage_Cell3 = 0, voltage_Cell4 = 0;
         private int current = 0;
         private double temperature = 0.0;
-        private Timer pollTimer;
+        Thread ThreadPollTimer;
         private bool hasEV23KError = false;
         private bool hasSMBusError = false;
         private bool isReadingGauge = false;
         private bool isDataflashAvail = false;
         private Mutex readDeviceMutex = new Mutex();
+
+        public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
+        public event LogWriteDelegate LogWriteEvent;
 
         #region Properties
         /// <summary>
@@ -48,6 +101,35 @@ namespace BQEV23K
                 return voltage;
             }
         }
+        public int VoltageCell1
+        {
+            get
+            {
+                return voltage_Cell1;
+            }
+        }
+        public int VoltageCell2
+        {
+            get
+            {
+                return voltage_Cell2;
+            }
+        }
+        public int VoltageCell3
+        {
+            get
+            {
+                return voltage_Cell3;
+            }
+        }
+        public int VoltageCell4
+        {
+            get
+            {
+                return voltage_Cell4;
+            }
+        }
+
 
         /// <summary>
         /// Get battery current.
@@ -146,6 +228,13 @@ namespace BQEV23K
                 return sbsItems.SbsRegister.Find(x => x.Caption == "IT Status").SbsBitItems.Find(x => x.SbsCaption == "QMAX").SbsBitValue != 0;
             }
         }
+        public bool FlagVDQ
+        {
+            get
+            {
+                return sbsItems.SbsRegister.Find(x => x.Caption == "IT Status").SbsBitItems.Find(x => x.SbsCaption == "VDQ").SbsBitValue != 0;
+            }
+        }
 
         /// <summary>
         /// Get status of QEN flag.
@@ -179,7 +268,14 @@ namespace BQEV23K
                 return sbsItems.SbsRegister.Find(x => x.Caption == "Battery Status").SbsBitItems.Find(x => x.SbsCaption == "FC").SbsBitValue != 0;
             }
         }
-        
+        public bool FlagFD
+        {
+            get
+            {
+                return sbsItems.SbsRegister.Find(x => x.Caption == "Battery Status").SbsBitItems.Find(x => x.SbsCaption == "FD").SbsBitValue != 0;
+            }
+        }
+
         /// <summary>
         /// Get status of GAUGE_EN flag.
         /// </summary>
@@ -228,6 +324,7 @@ namespace BQEV23K
         {
             get
             {
+                var item = bcfgItems.DataflashItems.Find(x => x.Caption == "Cell Configuration");
                 return bcfgItems.DataflashItems.Find(x => x.Caption == "Cell Configuration").RawValue.ToString();
             }
         }
@@ -297,11 +394,10 @@ namespace BQEV23K
         public GaugeInfo(EV23K ev)
         {
             EV23KBoard = ev;
-            sbsItems = new SbsItems(@"4800_0_02-bq40z80.bqz");
-            bcfgItems = new BcfgItems(@"4800_0_02_03-bq40z80.bcfgx");
-            cancelSource = new CancellationTokenSource();
-            cancelToken = cancelSource.Token;
-
+            sbsItems = new SbsItems(@"Resources/4800_0_04-bq40z80.bqz");
+            //bcfgItems = new BcfgItems(@"Resources/4800_0_04-bq40z80.bcfgx");
+            bcfgItems = new BcfgItems(@"Resources/4800_0_04-bq40z80.clipped.bcfgx");
+            
             WriteDevice("DEVICE_NUMBER");
             WriteDevice("HW_VERSION");
             WriteDevice("FW_VERSION");
@@ -324,8 +420,7 @@ namespace BQEV23K
         protected virtual void Dispose(bool disposing)
         {
             cancelSource.Dispose();
-            pollTimer.Dispose();
-            readDeviceMutex.Dispose();
+            cancelSource.Cancel();
             EV23KBoard.Dispose();
         }
 
@@ -335,8 +430,8 @@ namespace BQEV23K
         public void StartPolling()
         {
             cancelSource = new CancellationTokenSource();
-            cancelToken = cancelSource.Token;
-            pollTimer = new Timer(ReadGaugeData, null, 0, GaugeDataPollingInterval);
+            ThreadPollTimer = new Thread(ReadGaugeData);
+            ThreadPollTimer.Start(cancelSource.Token);
         }
 
         /// <summary>
@@ -344,7 +439,6 @@ namespace BQEV23K
         /// </summary>
         public void StopPolling()
         {
-            pollTimer.Dispose();
             if(!cancelSource.IsCancellationRequested)
                 cancelSource.Cancel();
         }
@@ -353,43 +447,56 @@ namespace BQEV23K
         /// Read data from device registers listed in cyclicReadGaugeDataRegisters.
         /// </summary>
         /// <param name="state">Not used.</param>
-        private async void ReadGaugeData(object state)
+        private void ReadGaugeData(object _ct)
         {
-            if(!EV23KBoard.IsPresent)
-            { 
-                hasEV23KError = true;
-                return;
-            }
+            var ct = (CancellationToken)_ct;
 
-            if (isReadingGauge) return;
-
-            isReadingGauge = true;
-
-            isReadingGauge = await Task.Run(() =>
+            try
             {
-                if (cancelToken.IsCancellationRequested) return false;
-
-                if (!EV23KBoard.IsPresent) return false;
-
-                hasSMBusError = false;
-
-                readDeviceMutex.WaitOne();
-
-                foreach(string cmd in cyclicReadGaugeDataRegisters)
+                // -- Single read
+                foreach (var cmd in singleReadGaugeDataRegisters)
                 {
                     if (ReadDevice(cmd) != EV23KError.NoError)
                         hasSMBusError = true;
                 }
-                
-                voltage = (int)GetReadValue("Voltage");
-                temperature = GetReadValue("Temperature");
-                current = (int)GetReadValue("Current");
+                // -- Cycle read
+                do
+                {
+                    if (!EV23KBoard.IsPresent)
+                    {
+                        hasEV23KError = true;
+                        return;
+                    }
 
-                ReadDataflash();
+                    hasSMBusError = false;
 
-                readDeviceMutex.ReleaseMutex();
-                return false;
-            }, cancelToken);
+                    readDeviceMutex.WaitOne();
+
+                    ReadDataflash();
+                    foreach (string cmd in cyclicReadGaugeDataRegisters)
+                    {
+                        if (ReadDevice(cmd) != EV23KError.NoError)
+                            hasSMBusError = true;
+                    }
+
+                    voltage = (int)GetReadValue("Voltage");
+                    voltage_Cell1 = (int)GetReadValue("Cell 1 Voltage");
+                    voltage_Cell2 = (int)GetReadValue("Cell 2 Voltage");
+                    voltage_Cell3 = (int)GetReadValue("Cell 3 Voltage");
+                    voltage_Cell4 = (int)GetReadValue("Cell 4 Voltage");
+
+                    temperature = GetReadValue("Temperature");
+                    current = (int)GetReadValue("Current");
+
+                    readDeviceMutex.ReleaseMutex();
+
+                    Task.Delay(GaugeDataPollingInterval, ct).Wait();
+                } while (!ct.IsCancellationRequested);
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         /// <summary>
@@ -416,6 +523,10 @@ namespace BQEV23K
                         i.CalculateBitFields();
                         i.CalculateDisplayValue();
                     }
+                    else
+                    {
+
+                    }
                 }
                 else if (i.ReadStyle == 2)
                 {
@@ -428,6 +539,10 @@ namespace BQEV23K
                             i.CalculateBitFields();
                             i.CalculateDisplayValue();
                         }
+                        else
+                        {
+
+                        }
                     }
                     else
                     {
@@ -437,6 +552,10 @@ namespace BQEV23K
                             i.GetRawValueFromDataBlock(dataBlock, dataLength, i.OffsetWithinBlock, i.LengthWithinBlock);
                             i.CalculateBitFields();
                             i.CalculateDisplayValue();
+                        }
+                        else
+                        {
+
                         }
                     }
                 }
@@ -449,8 +568,18 @@ namespace BQEV23K
                         i.CalculateBitFields();
                         i.CalculateDisplayValue();
                     }
+                    else
+                    {
+
+                    }
                 }
             }
+
+            if (err != EV23KError.NoError)
+            {
+
+            }
+
             return err;
         }
 
@@ -483,6 +612,8 @@ namespace BQEV23K
                     }
                 }
             }
+            LogWrite($"cmd = {caption} err = {err}");
+
             return err;
         }
 
@@ -509,6 +640,10 @@ namespace BQEV23K
             }
             return;
         }
+        private void LogWrite(string log)
+        {
+            LogWriteEvent?.Invoke(this, new LogWriteEventArgs(log));
+        }
 
         /// <summary>
         /// Get formatted string of register value, scaled and including the unit.
@@ -524,12 +659,21 @@ namespace BQEV23K
                 if (c == null)
                     return "";
                 else
-                    return c.DisplayValue;
+                    return c.DisplayValue.Replace(',', '.');
             }
             else
             {
-                return i.DisplayValue;
+                return i.DisplayValue.Replace(',', '.');
             }
+        }
+        public string GetShortName(string caption)
+        {
+            SbsRegisterItem i = sbsItems.SbsRegister.Find(x => x.Caption == caption);
+            if (i != null)
+            {
+                return i.LogCaption.Replace(',', '.');
+            }
+            return "???";
         }
 
         /// <summary>
@@ -600,10 +744,10 @@ namespace BQEV23K
         /// <param name="state">Logical ouput state.</param>
         public void ToggleChargerRelay(bool state)
         {
-            if(state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT);
+            if (state)
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_CHARG);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.VOUT);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT_CHARG);
         }
 
         /// <summary>
@@ -613,9 +757,9 @@ namespace BQEV23K
         public void ToggleLoadRelay(bool state)
         {
             if (state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.HDQ);
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_LOAD);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.HDQ);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT_LOAD);
         }
 
         /// <summary>
@@ -624,9 +768,9 @@ namespace BQEV23K
         public async void RemoteLoadStartButton()
         {
             await Task.Delay(3000);
-            EV23KBoard.GpioHigh(EV23KGpioMask.I2CSDA);
+            EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_START_BTN);
             await Task.Delay(100);
-            EV23KBoard.GpioLow(EV23KGpioMask.I2CSDA);
+            EV23KBoard.GpioLow(EV23KGpioMask.VOUT_START_BTN);
         }
     }
 }
