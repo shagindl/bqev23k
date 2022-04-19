@@ -51,7 +51,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.4.0.2 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.4.0.4 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -593,8 +593,6 @@ namespace BQEV23K
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge),
                     new DischargeTask(termVoltage, -1, 0x0E),
-                    //new RelaxTask(relaxTimeDischarge),
-                    //new ChargeTask(taperCurrent),
                 };
             }
             else if (selectedCycleType == CycleType.LearningCycle)
@@ -663,7 +661,7 @@ namespace BQEV23K
                 {
                     gauge.CommandToogleFETenable();
                 }
-                Task.Delay(CmdExecDelayMilliseconds).Wait();
+                Task.Delay(2 * CmdExecDelayMilliseconds).Wait();
                 if (gauge.FlagFET_EN == false)
                 {
                     LogView.AddEntry("Failed to set FET_EN.");
@@ -674,8 +672,12 @@ namespace BQEV23K
             ctDataLog.Cancel();
             ctConnectionM5010.Cancel();
 
-            ButtonCycleStart.IsEnabled = true;
-            ButtonCycleCancel.IsEnabled = false;
+            Application.Current.Dispatcher.BeginInvoke((Action)(() =>
+            {
+                ButtonCycleStart.IsEnabled = true;
+                ButtonCycleCancel.IsEnabled = false;
+            }));
+            
             // --
             if (ThreadConnectionM5010 != null)
                 ThreadConnectionM5010.Join();
