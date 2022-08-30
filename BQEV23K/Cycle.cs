@@ -313,7 +313,7 @@ namespace BQEV23K
                     {
                         elapsedTime = DateTime.Now.Subtract(t.StartTime);
 
-                        if (gauge.Current == 0)
+                        if (gauge.Current >= 0)
                         {
                             if (cycleModeType == BQEV23K.CycleModeType.Manual)
                             {

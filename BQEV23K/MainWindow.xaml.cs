@@ -51,7 +51,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.4.0.4 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.5.0.0 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;

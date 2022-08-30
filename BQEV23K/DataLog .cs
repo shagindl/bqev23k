@@ -35,6 +35,7 @@ namespace BQEV23K
             "Safety Alert A+B","Safety Alert C+D",
             "PF Status A+B","PF Status C+D",
             "PF Alert A+B","PF Alert C+D",
+            "Cell 1 Bal Time", "Cell 2 Bal Time","Cell 3 Bal Time","Cell 4 Bal Time",
         };
 
         /// <summary>

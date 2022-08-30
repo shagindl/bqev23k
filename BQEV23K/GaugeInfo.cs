@@ -71,6 +71,7 @@ namespace BQEV23K
             "Cell 2 Voltage",
             "Cell 3 Voltage",
             "Cell 4 Voltage",
+            "Cell 1 Bal Time", "Cell 2 Bal Time","Cell 3 Bal Time","Cell 4 Bal Time",
         };
 
         private EV23K EV23KBoard;
