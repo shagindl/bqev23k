@@ -96,17 +96,17 @@
                             </Button>
                             <TextBlock TextWrapping="Wrap" Text="Use this mode when relays are available to automate starting and stopping charge and discharge currents. This mode requires one charge relay connected to pin VOUT and one load relay connected to pin HDQ of the EV2300 to fully automate the learning cycle process. DO NOT connect relays directly to the EV2300 pins! Use a driver (transistor logic) to control the relays."/>
                         </WrapPanel>
-                    </GroupBox>                    
+                    </GroupBox>
                 </WrapPanel>
             </TabItem>
             <TabItem Name="TabItemConfiguration" Header="Configuration" IsEnabled="False">
                 <WrapPanel Orientation="Vertical">
-                    <GroupBox Header="Data Flash Configuration">
+                    <GroupBox Header="Data Flash Configuration" HorizontalAlignment="Left" Width="400">
                         <local:LayoutGroup HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,10,0,0">
                             <TextBlock TextWrapping="Wrap" Text="Cycle related parameters stored in device data flash. Must be configured correct prior to learning cycle." Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgBattCellCount" Label="Cell Count" Unit="" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgBattChemID" Label="Chemistry ID" Unit="" HorizontalAlignment="Left" Width="380"/>
-                            <local:LabelledTextboxCheck x:Name="CfgBattDesignVoltage" Label="Design Voltage" Unit="" HorizontalAlignment="Left" Width="380"/>
+                            <local:LabelledTextboxCheck x:Name="CfgBattDesignVoltage" Label="Design Voltage" Unit="" HorizontalAlignment="Left" Width="350"/>
                             <local:LabelledTextboxCheck x:Name="CfgBattDesignCapacity" Label="Design Capacity" Unit="" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgBattTaperCurr" Label="Taper Current" Unit="mA" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgBattDsgCurrThres" Label="Discharge Current Threshold" Unit="mA" HorizontalAlignment="Left" Width="380"/>
@@ -114,15 +114,21 @@
                             <local:LabelledTextboxCheck x:Name="CfgBattTermVolt" Label="Termination Voltage" Unit="mV" HorizontalAlignment="Left" Width="380"/>
                         </local:LayoutGroup>
                     </GroupBox>
-                    <GroupBox Header="Learning and GPC Cycle Configuration">
-                        <local:LayoutGroup HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,10,0,0">
+                    <GroupBox Header="Learning and GPC Cycle Configuration" HorizontalAlignment="Left" Width="400">
+                        <local:LayoutGroup VerticalAlignment="Top" Margin="0,10,188,0">
                             <TextBlock TextWrapping="Wrap" Text="These parameters are defining limits for cycle control. Set as required." Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleCellCount" Label="Cell Count" Unit="" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleTaperCurr" Label="Taper Current" Unit="mA" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleTermVolt" Label="Termination Voltage" Unit="mV" HorizontalAlignment="Left" Width="380"/>
+                            <local:LabelledTextboxCheck x:Name="CfgCycleTermVoltCell" Label="Term. Voltage Cell" Unit="mV" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleDischargeRelaxHours" Label="Discharge Relax Time" Unit="Hours" Text="5" HorizontalAlignment="Left" Width="380"/>
                             <local:LabelledTextboxCheck x:Name="CfgCycleChargeRelaxHours" Label="Charge Relax Time" Unit="Hours" Text="2" HorizontalAlignment="Left" Width="380"/>
-                            <local:LabelledTextboxCheck x:Name="IP_Load" Margin="0,20,0,0" Label="IP Load" Unit="" Text="192.168.14.19" HorizontalAlignment="Left" Width="380"/>
+                        </local:LayoutGroup>
+                    </GroupBox>
+                    <GroupBox Header="Other parameter Cycle Configuration" HorizontalAlignment="Left" Width="400">
+                        <local:LayoutGroup VerticalAlignment="Top" Margin="0,0,0,0">
+                            <local:LabelledTextboxCheck x:Name="IP_Load" Margin="0,0,10,0" Label="IP Load" Unit="" Text="192.168.14.19"/>
+                            <local:LabelledTextboxCheck x:Name="CycleRepetitions" Margin="0,0,10,0" Label="Cycle Repetitions" Unit="" Text="1"/>
                         </local:LayoutGroup>
                     </GroupBox>
                     <Image Name="ConfigHelpImage"  Width="580" HorizontalAlignment="Left" VerticalAlignment="Top"/>
@@ -165,7 +171,7 @@
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                         <Image Source="Resources/CancelLoop.png" Width="16" Height="16" Margin="0,0,10,0"/>
                                         <TextBlock>Cancel</TextBlock>
-                                    </StackPanel>                                    
+                                    </StackPanel>
                                 </Button>
                             </StackPanel>
                             <WrapPanel DockPanel.Dock="Left" Orientation="Vertical">
@@ -182,7 +188,7 @@
                     </GroupBox>
                     <GridSplitter HorizontalAlignment="Stretch" Grid.Row="1" Height="5" ResizeBehavior="PreviousAndNext" ResizeDirection="Rows"/>
                     <GroupBox Header="Plot" Background="White" Grid.Row="2" Margin="0,0,0,25">
-                            <oxy:PlotView Name="PlotView" Model="{Binding Plot1}" Margin="70,0,0,0"/>
+                        <oxy:PlotView Name="PlotView" Model="{Binding Plot1}" Margin="70,0,0,0"/>
                     </GroupBox>
                     <StackPanel Orientation="Horizontal" Grid.Row="2" VerticalAlignment="Bottom">
                         <Button Name="ButtonResetZoom" Content="Reset Zoom" Margin="0,0,10,0" Width="100" Click="ButtonResetZoom_Click"/>

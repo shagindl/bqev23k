@@ -20,5 +20,11 @@
     <Setting Name="IP_Load" Type="System.String" Scope="User">
       <Value Profile="(Default)">192.168.14.20</Value>
     </Setting>
+    <Setting Name="CycleRepetitions" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="TermVoltageCell" Type="System.String" Scope="User">
+      <Value Profile="(Default)">2500</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -1365,6 +1365,9 @@ namespace BQEV23K
 
             [FieldOffset(0)]
             public short[] Shorts;
+
+            [FieldOffset(0)]
+            public ushort[] Ushorts;
         }
 
         /// <summary>
@@ -1453,7 +1456,10 @@ namespace BQEV23K
             else
             {
                 Buffer.BlockCopy((byte[])dataBlock, 2 + offset, union.Bytes, 0, length);
-                rawValue = union.Shorts[0];
+                if (displayFormat.CompareTo("uu") == 0)
+                    rawValue = union.Ushorts[0];
+                else
+                    rawValue = union.Shorts[0];
             }
         }
 

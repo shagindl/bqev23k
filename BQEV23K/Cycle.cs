@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace BQEV23K
 {
@@ -60,6 +61,8 @@ namespace BQEV23K
         private Type taskType;
         private CycleModeType cycleModeType;
         private bool pushLoadStartButton = true;
+
+        private Stopwatch stop_watch;
 
         public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
         public event LogWriteDelegate LogWriteEvent;
@@ -153,11 +156,16 @@ namespace BQEV23K
             cycleTimer.Dispose();
         }
 
-        /// <summary>
-        /// Write new string to LogViewer control.
-        /// </summary>
-        /// <param name="log">String to write.</param>
-        private void LogWrite(string log)
+        public void UpdateGauge(GaugeInfo _gauge)
+        {
+            gauge = _gauge;
+        }
+
+            /// <summary>
+            /// Write new string to LogViewer control.
+            /// </summary>
+            /// <param name="log">String to write.</param>
+            private void LogWrite(string log)
         {
             LogWriteEvent?.Invoke(this, new LogWriteEventArgs(log));
         }
@@ -168,6 +176,8 @@ namespace BQEV23K
         /// <returns>False on error. True if cycle is in process.</returns>
         public bool StartCycle()
         {
+            stop_watch = new Stopwatch();
+
             if (taskList == null || taskList.Count == 0)
             {
                 LogWrite("No task to run!");
@@ -251,10 +261,17 @@ namespace BQEV23K
         {
             if (processStatus) return;
             processStatus = true;
+            
 
             processStatus = await Task.Run(() =>
             {
                 if (!cycleInProgress)
+                    return false;
+
+                if(gauge.HasSMBusError)
+                    return false;
+
+                if(!gauge.fValidInfo)
                     return false;
 
                 if (currentTask < taskList.Count)
@@ -294,9 +311,14 @@ namespace BQEV23K
                             }
                             else
                             {
-                                gauge.ToggleChargerRelay(true);
-                                gauge.ToggleLoadRelay(false);
-                                pushLoadStartButton = true;
+                                if (stop_watch.IsRunning && (stop_watch.ElapsedMilliseconds > 1000)) stop_watch.Stop();
+                                if (!stop_watch.IsRunning)
+                                {
+                                    gauge.ToggleChargerRelay(true, true);
+                                    gauge.ToggleLoadRelay(false);
+                                    pushLoadStartButton = true;
+                                    stop_watch.Start();
+                                }
                             }
                         }
                         elapsedTime = DateTime.Now.Subtract(t.StartTime);
@@ -321,12 +343,18 @@ namespace BQEV23K
                             }
                             else
                             {
-                                gauge.ToggleChargerRelay(false);
-                                gauge.ToggleLoadRelay(true);
-                                if (pushLoadStartButton)
+                                if (stop_watch.IsRunning && (stop_watch.ElapsedMilliseconds > 1000) ) stop_watch.Stop();
+
+                                if (!stop_watch.IsRunning)
                                 {
-                                    gauge.RemoteLoadStartButton();
-                                    pushLoadStartButton = false;
+                                    gauge.ToggleChargerRelay(false);
+                                    gauge.ToggleLoadRelay(true, true);
+                                    if (pushLoadStartButton)
+                                    {
+                                        gauge.RemoteLoadStartButton();
+                                        pushLoadStartButton = false;
+                                    }
+                                    stop_watch.Start();
                                 }
                             }
                         }

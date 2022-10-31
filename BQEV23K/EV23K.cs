@@ -92,6 +92,7 @@ namespace BQEV23K
                 return isPresent;
             }
         }
+        public bool IsDisposed { get; set; }
 
         /// <summary>
         /// Get name of EV2300 hardware interface.
@@ -122,6 +123,8 @@ namespace BQEV23K
         /// <param name="host">Host for BQ80xRW COM object.</param>
         public EV23K(out System.Windows.Forms.Integration.WindowsFormsHost host)
         {
+            IsDisposed = false;
+
             host = new System.Windows.Forms.Integration.WindowsFormsHost();
             EV23KBoard = new AxBQEV23K.EV2400();
             host.Child = EV23KBoard;
@@ -141,6 +144,8 @@ namespace BQEV23K
 
         protected virtual void Dispose(bool disposing)
         {
+            IsDisposed = true;
+
             isPresent = false;
             timerCheckStatus.Close();
             EV23KBoard.Dispose();
@@ -164,10 +169,14 @@ namespace BQEV23K
                 EV23KError err = (EV23KError)EV23KBoard.GPIOMask(0);
                 if (err == EV23KError.NoUSB)
                 {
+                    if(isPresent) LogWrite($"EV23KBoard - disconected!");
+
                     isPresent = false;
                 }
                 else
                 {
+                    if (!isPresent) LogWrite($"EV23KBoard - Connected!");
+
                     isPresent = true;
                 }
             } catch (Exception ex)
@@ -192,20 +201,31 @@ namespace BQEV23K
                 object obj = null;
                 short len = 0, ver = 0, rev = 0;
 
+                EV23KMutex.WaitOne();
+
                 EV23KBoard.GetFreeBoards(1, ref BrdsNumber, ref BrdsName);
 
                 if (BrdsNumber <= 0)
                     return EV23KError.IncorrectParameter;
 
+                if (!isPresent)
+                {
+                    //Task.Delay(2000);
+                    //System.Threading.Thread.Sleep(2000);
+                }
+
                 BrdsName = BrdsName.Substring(0, BrdsName.Length - 1);
                 EV23KError err = (EV23KError)EV23KBoard.OpenDevice(ref BrdsName);
-                if(err == EV23KError.NoError)
+                EV23KMutex.ReleaseMutex();
+
+                if (err == EV23KError.NoError)
                 {
                     timerCheckStatus.Enabled = true;
                     CheckStatus(null, null);
 
                     err = (EV23KError)EV23KBoard.GetEV2300Name(ref obj, ref len);
-                    if(name != null)
+                    err = (EV23KError)EV23KBoard.GetEV2300Name(ref obj, ref len);
+                    if (name != null)
                     {
                         name = Encoding.ASCII.GetString((byte[])obj);
                         int i = name.IndexOf('\0');
@@ -238,6 +258,8 @@ namespace BQEV23K
 
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT4);
                     //err = (EV23KError)GpioToggle(EV23KGpioMask.VOUT4);
+
+                    LogWrite($"EV2300 - Connect() BrdsNumber = {BrdsNumber}, BrdsName = {BrdsName} !");
                 }
                 return err;
             }
@@ -255,14 +277,21 @@ namespace BQEV23K
             isPresent = false;
             timerCheckStatus.Enabled = false;
 
-            Task.Delay(1000);
+            LogWrite($"EV2300 - Disconnect()!");
+
+            System.Threading.Thread.Sleep(1000);
 
             try {
+                EV23KMutex.WaitOne();
                 EV23KBoard.CloseDevice();
             }
             catch (Exception ex)
             {
                 throw new ArgumentException(ex.Message);
+            }
+            finally
+            {
+                EV23KMutex.ReleaseMutex();
             }
         }
         public void DisableAll()
@@ -582,7 +611,7 @@ namespace BQEV23K
         /// </summary>
         /// <param name="gpio">GPIO pin mask to set.</param>
         /// <returns>EV2300 error code.</returns>
-        public EV23KError GpioHigh(EV23KGpioMask gpio)
+        public EV23KError GpioHigh(EV23KGpioMask gpio, bool fRepeat = false)
         {
             EV23KError err = EV23KError.NoError, err2log = EV23KError.Unknow;
 
@@ -597,7 +626,7 @@ namespace BQEV23K
                     if (state_GPIO != EV23KGpioMask.VOUTunknow)
                     {
                         var state = ((state_GPIO & gpio) == gpio) ? true : false;
-                        if (state)
+                        if (state && !fRepeat)
                             goto __exit;
                     }
                     else
@@ -606,6 +635,7 @@ namespace BQEV23K
                     state_GPIO |= (gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
                     err = err2log  = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 1);
+
                     goto __exit;
             }
             err = err2log = (EV23KError)EV23KBoard.GPIOWrite((short)gpio, (short)gpio);
@@ -622,7 +652,7 @@ namespace BQEV23K
         /// </summary>
         /// <param name="gpio">GPIO pin mask to set.</param>
         /// <returns>EV2300 error code.</returns>
-        public EV23KError GpioLow(EV23KGpioMask gpio)
+        public EV23KError GpioLow(EV23KGpioMask gpio, bool fRepeat = false)
         {
             EV23KError err = EV23KError.NoError, err2log = EV23KError.Unknow;
 
@@ -638,7 +668,7 @@ namespace BQEV23K
                     if (state_GPIO != EV23KGpioMask.VOUTunknow)
                     {
                         var state = ((state_GPIO & gpio) == gpio) ? true : false;
-                        if (!state)
+                        if (!state && !fRepeat)
                             goto __exit;
                     }
                     else
@@ -647,6 +677,7 @@ namespace BQEV23K
                     state_GPIO &= ~(gpio & ~EV23KGpioMask.mskVOUTx);
                     var indx_gpio = (short)(gpio & ~EV23KGpioMask.mskVOUTx);
                     err = err2log = (EV23KError)EV23KBoard.SetPinVoltage(indx_gpio, 0);
+
                     goto __exit;
             }
 

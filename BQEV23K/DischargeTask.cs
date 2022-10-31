@@ -12,7 +12,7 @@ namespace BQEV23K
     public class DischargeTask : GenericTask
     {
         private const int TerminationHoldOffMilliseconds = 5000;
-        private int terminateVoltage;
+        private int terminateVoltage, termVoltageCell;
         private double currentDeisharge = -1, current;
         private bool isCompleted = false;
         private DateTime startTime;
@@ -57,24 +57,25 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="tv">Termination voltage to end task.</param>
-        public DischargeTask(int tv, double _current, double LStatus = -1)
+        public DischargeTask(int tv, int tvCell, double _current, double LStatus = -1)
         {
             currentDeisharge = _current;
             LStatus_complite = LStatus;
 
-            Init(tv);
+            Init(tv, tvCell);
         }
-        public DischargeTask(int tv, double _current = 4.0)
+        public DischargeTask(int tv, int tvCell, double _current = 4.0)
         {
             currentDeisharge = _current;
             LStatus_complite = -1;
 
-            Init(tv);
+            Init(tv, tvCell);
         }
-        private void Init(int tv)
+        private void Init(int tv, int tvCell)
         {
             startTime = DateTime.Now;
             terminateVoltage = tv;
+            termVoltageCell = tvCell;
             current = -1.0;
         }
 
@@ -101,7 +102,7 @@ namespace BQEV23K
             {
                 if ( DateTime.Now.Subtract(startTime).TotalMilliseconds >= TerminationHoldOffMilliseconds)
                 {
-                    if(gaugeInfo.Voltage < this.terminateVoltage)
+                    if(gaugeInfo.Voltage < this.terminateVoltage || gaugeInfo.MinVoltageCell < termVoltageCell)
                     {
                         isCompleted = true;
                     }

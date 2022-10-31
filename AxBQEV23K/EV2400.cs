@@ -77,6 +77,14 @@ class bq80xrw
         [DllImport("bq80xrw.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
         public static extern short SetPinVoltage(short channel, short state);
 
+        [DllImport("bq80xrw.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
+        public static extern short SetVVODVoltage(short channel, short state);
+
+        [DllImport("bq80xrw.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
+        public static extern short GetVVODVoltage(char channel, ref short state);
+
+        // int __cdecl GetVVODVoltage(char a1, _WORD* a2);
+
         //public virtual short WriteOneWire(OneWireType eType, short nOneWireCmd, short nWord);
 
         //public virtual short ReadOneWire(OneWireType eType, short nOneWireCmd, ref short nWord);
@@ -296,6 +304,24 @@ class bq80xrw
         {
             return bq80xrw.SetPinVoltage(channel, state);
         }
+        //public static extern short SetVVODVoltage(short channel, short state);
+        public short SetVVODVoltage(short channel, short state)
+        {
+            return bq80xrw.SetVVODVoltage(channel, state);
+        }
+        //public static extern short GetVVODVoltage(char channel, IntPtr state);
+        public short GetVVODVoltage(short channel, ref short state)
+        {
+            short ret = 0;
+            byte[] NameDataBlock_Arr = new byte[256];
+
+
+            ret = bq80xrw.GetVVODVoltage((char)channel, ref state);
+            //short ret = bq80xrw.GetVVODVoltage((char)channel, new xIntPtr(ref NameDataBlock_Arr).IPtr);
+
+            return ret;
+        }
+
         //public virtual short MassEraseOption(short nAllow);
 
         public short GetEV2300Name(ref object NameDataBlock, ref short nLen)
@@ -309,6 +335,7 @@ class bq80xrw
 
             return sts;
         }
+
 
         //public virtual short SetEV2300Name(object NameDataBlock, short nLen);
 

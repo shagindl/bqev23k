@@ -94,5 +94,29 @@ namespace BQEV23K.Properties {
                 this["IP_Load"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int CycleRepetitions {
+            get {
+                return ((int)(this["CycleRepetitions"]));
+            }
+            set {
+                this["CycleRepetitions"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2500")]
+        public string TermVoltageCell {
+            get {
+                return ((string)(this["TermVoltageCell"]));
+            }
+            set {
+                this["TermVoltageCell"] = value;
+            }
+        }
     }
 }
