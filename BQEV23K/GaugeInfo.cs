@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BQEV23K
 {
@@ -58,19 +59,20 @@ namespace BQEV23K
             //"Charging Current",
             //"Charging Voltage",
 
-            "QMax Passed Q",/*"QMax Time",*/
-            "DOD0 Passed Q","DOD0 Passed E",/*"DOD0 Time",*/
-            "Cell 1 QMax",/*"Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",*/
-            "Cell 1 QMax DOD0", /*"Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",*/
-            "Cell 1 Raw DOD", /*"Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",*/
-            "Cell 1 DOD0",/*"Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",*/
-            "Cell 1 DODEOC",/*"Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",*/
-            "Cell 1 Grid",/*"Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",*/
+            "QMax Passed Q","QMax Time",
+            "DOD0 Passed Q","DOD0 Passed E", "DOD0 Time",
+            "Cell 1 QMax", "Cell 2 QMax","Cell 3 QMax","Cell 4 QMax",
+            "Cell 1 QMax DOD0", "Cell 2 QMax DOD0","Cell 3 QMax DOD0","Cell 4 QMax DOD0",
+            "Cell 1 Raw DOD", "Cell 2 Raw DOD","Cell 3 Raw DOD","Cell 4 Raw DOD",
+            "Cell 1 DOD0","Cell 2 DOD0","Cell 3 DOD0","Cell 4 DOD0",
+            "Cell 1 DODEOC","Cell 2 DODEOC","Cell 3 DODEOC","Cell 4 DODEOC",
+            "Cell 1 Grid","Cell 2 Grid","Cell 3 Grid","Cell 4 Grid",
 
             "Cell 1 Voltage",
             "Cell 2 Voltage",
             "Cell 3 Voltage",
             "Cell 4 Voltage",
+            "Cell 1 Bal Time", "Cell 2 Bal Time","Cell 3 Bal Time","Cell 4 Bal Time",
         };
 
         private EV23K EV23KBoard;
@@ -99,6 +101,14 @@ namespace BQEV23K
             get
             {
                 return voltage;
+            }
+        }
+        public int MinVoltageCell
+        {
+            get
+            {
+                return new int[] { VoltageCell1, VoltageCell2, VoltageCell3, VoltageCell4 }.Min();
+
             }
         }
         public int VoltageCell1
@@ -385,6 +395,8 @@ namespace BQEV23K
             }
         }
 
+        public bool fValidInfo { get; set; }
+
         #endregion
 
         /// <summary>
@@ -393,6 +405,8 @@ namespace BQEV23K
         /// <param name="ev">Reference to EV2300 board</param>
         public GaugeInfo(EV23K ev)
         {
+            fValidInfo = false;
+
             EV23KBoard = ev;
             sbsItems = new SbsItems(@"Resources/4800_0_04-bq40z80.bqz");
             //bcfgItems = new BcfgItems(@"Resources/4800_0_04-bq40z80.bcfgx");
@@ -419,9 +433,12 @@ namespace BQEV23K
 
         protected virtual void Dispose(bool disposing)
         {
-            cancelSource.Dispose();
             cancelSource.Cancel();
-            EV23KBoard.Dispose();
+            if (disposing)
+            {
+                cancelSource.Dispose();
+                EV23KBoard.Dispose();
+            }
         }
 
         /// <summary>
@@ -465,6 +482,12 @@ namespace BQEV23K
                     if (!EV23KBoard.IsPresent)
                     {
                         hasEV23KError = true;
+
+                        voltage = 0;
+                        voltage_Cell1 = voltage_Cell2 = voltage_Cell3 = voltage_Cell4 = 0;
+                        temperature = 0;
+                        current = 0;
+                        
                         return;
                     }
 
@@ -490,12 +513,14 @@ namespace BQEV23K
 
                     readDeviceMutex.ReleaseMutex();
 
+                    fValidInfo = true;
+
                     Task.Delay(GaugeDataPollingInterval, ct).Wait();
                 } while (!ct.IsCancellationRequested);
             }
             catch (Exception)
             {
-
+                { }
             }
         }
 
@@ -742,24 +767,24 @@ namespace BQEV23K
         /// Changes status of the charger relay connected to EV2300 on pin VOUT.
         /// </summary>
         /// <param name="state">Logical ouput state.</param>
-        public void ToggleChargerRelay(bool state)
+        public void ToggleChargerRelay(bool state, bool fRepeat = false)
         {
             if (state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_CHARG);
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_CHARG, fRepeat);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.VOUT_CHARG);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT_CHARG, fRepeat);
         }
 
         /// <summary>
         /// Changes status of the load relay connected to EV2300 on pin HDQ.
         /// </summary>
         /// <param name="state">Logical output state.</param>
-        public void ToggleLoadRelay(bool state)
+        public void ToggleLoadRelay(bool state, bool fRepeat = false)
         {
             if (state)
-                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_LOAD);
+                EV23KBoard.GpioHigh(EV23KGpioMask.VOUT_LOAD, fRepeat);
             else
-                EV23KBoard.GpioLow(EV23KGpioMask.VOUT_LOAD);
+                EV23KBoard.GpioLow(EV23KGpioMask.VOUT_LOAD, fRepeat);
         }
 
         /// <summary>

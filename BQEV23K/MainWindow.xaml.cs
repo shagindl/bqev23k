@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Threading;
+using System.Diagnostics;
 
 /**
  * How to setup such project see:
@@ -51,7 +52,7 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.4.0.4 by ""ООО ВЗОР"" /Mictronics";
+            Title = @"BQEV2400 - v2.5.0.0 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
             board = new EV23K(out host);
             host.Width = host.Height = 0;
@@ -81,9 +82,11 @@ namespace BQEV23K
             CfgCycleCellCount.Text = Properties.Settings.Default.CellCount;
             CfgCycleTaperCurr.Text = Properties.Settings.Default.TaperCurrent;
             CfgCycleTermVolt.Text = Properties.Settings.Default.TerminationVoltage;
+            CfgCycleTermVoltCell.Text = Properties.Settings.Default.TermVoltageCell;
             CfgCycleChargeRelaxHours.Text = Properties.Settings.Default.ChargeRelaxHours;
             CfgCycleDischargeRelaxHours.Text = Properties.Settings.Default.DischargeRelaxHours;
             IP_Load.Text = Properties.Settings.Default.IP_Load;
+            CycleRepetitions.Text = Properties.Settings.Default.CycleRepetitions.ToString();
 
             try
             {
@@ -194,22 +197,97 @@ namespace BQEV23K
         /// <param name="sender">Not used.</param>
         /// <param name="e">Not used</param>
         bool fInUpdateGui = false, fSingleUpdateGui = false;
+        private Stopwatch ReconnectBoard_StopWatch = new Stopwatch();
         public void UpdateGui(object sender, System.EventArgs e)
         {
             if (fInUpdateGui) return;
 
             fInUpdateGui = true;
-            if (board != null)
+            if (board != null && !board.IsDisposed)
             {
                 if (board.IsPresent)
                 {
+
                     IconEV23K.Source = GetImageSourceFromResource("usb-icon_128.png");
                     LabelEV23KName.Content = board.Name;
                 }
                 else
                 {
+                    if (gauge != null)
+                    {
+                        gauge.ReadDeviceMutex.WaitOne();
+                        gauge.StopPolling();
+                        gauge.ReadDeviceMutex.ReleaseMutex();
+                        gauge.Dispose();
+                    }
+                    else
+                    {
+                        board.Disconnect();
+                        board.Dispose();
+                    }
+                    LogView.AddEntry("EV2300 disconnected...");
+
+                    ReconnectBoard_StopWatch.Start();
+                    //int BrdsNumber = 0;
+                    //string BrdsName = "";
+                    //// -- Disconnect
+                    //board.Disconnect();
+                    //LogView.AddEntry("EV2300 disconnect.");
+                    //// -- Connect
+                    //board.Connect(out BrdsNumber, out BrdsName);
+                    //LogView.AddEntry("EV2300 connected...");
+                    //Console.WriteLine(BrdsName);
+                    //EV23KError err = board.CheckForError();
+
+                    //if (!board.IsPresent)
+                    //{
+                    //    IconEV23K.Source = GetImageSourceFromResource("USB-Disabled-128.png");
+                    //    LabelEV23KName.Content = string.Empty;
+                    //}
+                    //else
+                    //{
+                    //    Console.WriteLine(BrdsName);
+                    //}
+
                     IconEV23K.Source = GetImageSourceFromResource("USB-Disabled-128.png");
                     LabelEV23KName.Content = string.Empty;
+                }
+            }
+            else
+            {
+                if (ReconnectBoard_StopWatch.ElapsedMilliseconds > 1000)
+                {
+                    ReconnectBoard_StopWatch.Restart();
+
+                    System.Windows.Forms.Integration.WindowsFormsHost host;
+                    board = new EV23K(out host);
+
+                    try
+                    {
+                        int BrdsNumber = 0;
+                        string BrdsName = "";
+
+                        if (board.Connect(out BrdsNumber, out BrdsName) != 0)
+                            throw new ArgumentException("EV2300 not found.");
+
+                        LogView.AddEntry("EV2300 connected...");
+                        Console.WriteLine(BrdsName);
+
+                        EV23KError err = board.CheckForError();
+                        gauge = new GaugeInfo(board);
+
+                        if (cycle.CycleInProgress)
+                        {
+                            cycle.UpdateGauge(gauge);
+                        }
+
+                        ReconnectBoard_StopWatch.Stop();
+                    }
+                    catch (Exception ex)
+                    {
+                        board.Dispose();
+                        Console.WriteLine(ex.Message);
+                    }
                 }
             }
 
@@ -231,7 +309,15 @@ namespace BQEV23K
                     IconGauge.Source = GetImageSourceFromResource("Gauge-Disabled-128.png");
                     LabelGaugeName.Content = LabelGaugeVersion.Text = string.Empty;
                     LabelGaugeVoltage.Content = LabelGaugeTemperature.Content = string.Empty;
-               }
+
+                    LearningVoltageLabel.Content = "Voltage: ";
+                    LearningCurrentLabel.Content = "Current: ";
+                    LearningTemperatureLabel.Content = "Temperature: ";
+                    LearningVoltage1Label.Content = "Voltage C1: ";
+                    LearningVoltage2Label.Content = "Voltage C2: ";
+                    LearningVoltage3Label.Content = "Voltage C3: ";
+                    LearningVoltage4Label.Content = "Voltage C4: ";
+                }
                 else
                 {
                     if (!fSingleUpdateGui)
@@ -257,7 +343,7 @@ namespace BQEV23K
                     ChgCurr.Content = $"ChgCurr: {gauge.GetDisplayValue("Charging Current")} mA";
                     ChgVolt.Content = $"ChgVolt: {gauge.GetDisplayValue("Charging Voltage")} mV";
                     LStatus.Content = $"LStatus: {gauge.GetDisplayValue("LStatus")}";
-                    RSOC.Content =  $"RSOC: {gauge.GetDisplayValue("Relative State of Charge")}";
+                    RSOC.Content = $"RSOC: {gauge.GetDisplayValue("Relative State of Charge")}";
 
                     FlagFC.IsChecked = gauge.FlagFC;
                     FlagFD.IsChecked = gauge.FlagFD;
@@ -281,29 +367,30 @@ namespace BQEV23K
                     CfgBattTaperCurr.Text = gauge.DFTaperCurrent;
                     CfgBattChgCurrThres.Text = gauge.DFChgCurrentThreshold;
                     CfgBattDsgCurrThres.Text = gauge.DFDsgCurrentThreshold;
+
+                    if (cycle != null && cycle.CycleInProgress)
+                    {
+
+                        LearningVoltageLabel.Content = "Voltage: " + gauge.GetDisplayValue("Voltage");
+                        LearningCurrentLabel.Content = "Current: " + gauge.GetDisplayValue("Current");
+                        LearningTemperatureLabel.Content = "Temperature: " + gauge.GetDisplayValue("Temperature");
+                        LearningVoltage1Label.Content = "Voltage C1: " + gauge.GetDisplayValue("Cell 1 Voltage");
+                        LearningVoltage2Label.Content = "Voltage C2: " + gauge.GetDisplayValue("Cell 2 Voltage");
+                        LearningVoltage3Label.Content = "Voltage C3: " + gauge.GetDisplayValue("Cell 3 Voltage");
+                        LearningVoltage4Label.Content = "Voltage C4: " + gauge.GetDisplayValue("Cell 4 Voltage");
+
+                        if (cycle.RunningTaskName == "RelaxTask")
+                        {
+                            LearningTimeLabel.Content = "Waiting Time: " + cycle.ElapsedTime.ToString(@"hh\:mm\:ss");
+                        }
+                        else
+                        {
+                            LearningTimeLabel.Content = "Elapsed Time: " + cycle.ElapsedTime.ToString(@"hh\:mm\:ss");
+                        }
+                    }
                 }
             }
 
-            if (cycle != null && cycle.CycleInProgress)
-            {
-
-                LearningVoltageLabel.Content = "Voltage: " + gauge.GetDisplayValue("Voltage");
-                LearningCurrentLabel.Content = "Current: " + gauge.GetDisplayValue("Current");
-                LearningTemperatureLabel.Content = "Temperature: " + gauge.GetDisplayValue("Temperature");
-                LearningVoltage1Label.Content = "Voltage C1: " + gauge.GetDisplayValue("Cell 1 Voltage");
-                LearningVoltage2Label.Content = "Voltage C2: " + gauge.GetDisplayValue("Cell 2 Voltage");
-                LearningVoltage3Label.Content = "Voltage C3: " + gauge.GetDisplayValue("Cell 3 Voltage");
-                LearningVoltage4Label.Content = "Voltage C4: " + gauge.GetDisplayValue("Cell 4 Voltage");
-
-                if (cycle.RunningTaskName == "RelaxTask")
-                {
-                    LearningTimeLabel.Content = "Waiting Time: " + cycle.ElapsedTime.ToString(@"hh\:mm\:ss");
-                }
-                else
-                {
-                    LearningTimeLabel.Content = "Elapsed Time: " + cycle.ElapsedTime.ToString(@"hh\:mm\:ss");
-                }
-            }
             fInUpdateGui = false;
         }
 
@@ -324,17 +411,21 @@ namespace BQEV23K
                     if (InUpdatePlot) return;
 
                     InUpdatePlot = true;
-                    gauge.ReadDeviceMutex.WaitOne();
-                    var Voltage = gauge.Voltage;
-                    var Current = gauge.Current;
-                    var Temperature = gauge.Temperature;
-                    gauge.ReadDeviceMutex.ReleaseMutex();
 
-                    plot.Output(Voltage, Current, Temperature);
-
-                    if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
+                    if (gauge != null)
                     {
-                        gpcLog.WriteLine(Voltage, Current, Temperature);
+                        gauge.ReadDeviceMutex.WaitOne();
+                        var Voltage = gauge.Voltage;
+                        var Current = gauge.Current;
+                        var Temperature = gauge.Temperature;
+                        gauge.ReadDeviceMutex.ReleaseMutex();
+
+                        plot.Output(Voltage, Current, Temperature);
+
+                        if (selectedCycleType == CycleType.GpcCycle && gpcLog != null)
+                        {
+                            gpcLog.WriteLine(Voltage, Current, Temperature);
+                        }
                     }
                     InUpdatePlot = false;
 
@@ -420,13 +511,19 @@ namespace BQEV23K
                 return;
             }
 
-            int termVoltage = 0;
+            int termVoltage = 0, termVoltageCell = 0;
             int.TryParse(CfgCycleTermVolt.Text, out termVoltage);
+            int.TryParse(CfgCycleTermVoltCell.Text, out termVoltageCell);
 
             int ctv = (termVoltage / cellCount);
             if (termVoltage <= 0 || (ctv < 2000) || (termVoltage / cellCount > 4200))
             {
                 LogView.AddEntry("Invalid termination voltage! (" + ctv.ToString() + "mV/cell)");
+                return;
+            }
+            if (termVoltageCell < 2000 || termVoltageCell > 4200)
+            {
+                LogView.AddEntry("Invalid termination voltage cell! (" + ctv.ToString() + "mV/cell)");
                 return;
             }
 
@@ -572,37 +669,41 @@ namespace BQEV23K
             Properties.Settings.Default.ChargeRelaxHours = CfgCycleChargeRelaxHours.Text;
             Properties.Settings.Default.DischargeRelaxHours = CfgCycleDischargeRelaxHours.Text;
             Properties.Settings.Default.IP_Load = IP_Load.Text;
+            Properties.Settings.Default.CycleRepetitions = int.Parse(CycleRepetitions.Text);
             Properties.Settings.Default.Save();
 
             List<GenericTask> tl = new List<GenericTask>();
 
             if (selectedCycleType == CycleType.DischargeChargeTask)
             {
-                tl = new List<GenericTask> {
-                    new DischargeTask(termVoltage),
-                    new RelaxTask(relaxTimeDischarge, true),
-                    new ChargeTask(taperCurrent),
-                    new RelaxTask(relaxTimeCharge, true),
-                };
+                for(int i = 0; i < int.Parse(CycleRepetitions.Text); i++)
+                {
+                    tl.AddRange( new List<GenericTask> {
+                            new DischargeTask(termVoltage, termVoltageCell),
+                            new RelaxTask(relaxTimeDischarge, true),
+                            new ChargeTask(taperCurrent),
+                            new RelaxTask(relaxTimeCharge, true),
+                    } );
+                }
             }
             else if (selectedCycleType == CycleType.ProductionCycle)
             {
                 tl = new List<GenericTask> {
-                    new DischargeTask(termVoltage),
+                    new DischargeTask(termVoltage, termVoltageCell),
                     new RelaxTask(relaxTimeDischarge),
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge),
-                    new DischargeTask(termVoltage, -1, 0x0E),
+                    new DischargeTask(termVoltage, termVoltageCell, -1, 0x0E),
                 };
             }
             else if (selectedCycleType == CycleType.LearningCycle)
             {
                 tl = new List<GenericTask> {
-                    new DischargeTask(termVoltage, 4.0),
+                    new DischargeTask(termVoltage, termVoltageCell, 4.0),
                     new RelaxTask(relaxTimeDischarge),
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge),
-                    new DischargeTask(termVoltage, 1.1),
+                    new DischargeTask(termVoltage, termVoltageCell, 1.1),
                     new RelaxTask(relaxTimeDischarge),
                 };
                 
@@ -612,7 +713,7 @@ namespace BQEV23K
                     tl.AddRange(new GenericTask[]{
                         new ChargeTask(taperCurrent),
                         new RelaxTask(relaxTimeCharge),
-                        new DischargeTask(termVoltage, 1.1),
+                        new DischargeTask(termVoltage, termVoltageCell, 1.1),
                         new RelaxTask(relaxTimeDischarge),
                     });
                 }
@@ -623,7 +724,7 @@ namespace BQEV23K
                     new RelaxTask(3, true),
                     new ChargeTask(taperCurrent),
                     new RelaxTask(relaxTimeCharge, true),
-                    new DischargeTask(termVoltage, 0.6),
+                    new DischargeTask(termVoltage, termVoltageCell, 0.6),
                     new RelaxTask(relaxTimeDischarge, true),
                 };
 
@@ -657,14 +758,17 @@ namespace BQEV23K
         {
             if (selectedCycleType == CycleType.ProductionCycle)
             {
-                if (gauge.FlagFET_EN == false)
+                if (gauge != null)
                 {
-                    gauge.CommandToogleFETenable();
-                }
-                Task.Delay(2 * CmdExecDelayMilliseconds).Wait();
-                if (gauge.FlagFET_EN == false)
-                {
-                    LogView.AddEntry("Failed to set FET_EN.");
+                    if (gauge.FlagFET_EN == false)
+                    {
+                        gauge.CommandToogleFETenable();
+                    }
+                    Task.Delay(2 * CmdExecDelayMilliseconds).Wait();
+                    if (gauge.FlagFET_EN == false)
+                    {
+                        LogView.AddEntry("Failed to set FET_EN.");
+                    }
                 }
             }
             // Add trophy here.
