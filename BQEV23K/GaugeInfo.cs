@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 
 namespace BQEV23K
 {
@@ -11,7 +12,7 @@ namespace BQEV23K
     /// </summary>
     public class GaugeInfo : IDisposable
     {
-        private const int GaugeDataPollingInterval = 100;
+        private const int GaugeDataPollingInterval = 300;
         private readonly List<string> singleReadGaugeDataRegisters = new List<string> {
             "Device Chemistry",
             "Manufacturer Name",
@@ -45,7 +46,10 @@ namespace BQEV23K
             "Operation Status A",
             "Operation Status B",
             "Relative State of Charge",
-            //"Absolute State of Charge",
+            "Absolute State of Charge",
+
+            "Remaining Capacity",
+            "Full charge Capacity",
 
             "Charging Status","Gauging Status",
             "Safety Status A+B", "Safety Status C+D",
@@ -87,10 +91,11 @@ namespace BQEV23K
         private bool hasSMBusError = false;
         private bool isReadingGauge = false;
         private bool isDataflashAvail = false;
-        private Mutex readDeviceMutex = new Mutex();
+        private LogMutex readDeviceMutex;
 
         public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
         public event LogWriteDelegate LogWriteEvent;
+        private Logs.DebugLog log;
 
         #region Properties
         /// <summary>
@@ -387,11 +392,11 @@ namespace BQEV23K
             }
         }
 
-        public Mutex ReadDeviceMutex
+        public ref LogMutex ReadDeviceMutex
         {
             get
             {
-                return readDeviceMutex;
+                return ref readDeviceMutex;
             }
         }
 
@@ -403,8 +408,11 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="ev">Reference to EV2300 board</param>
-        public GaugeInfo(EV23K ev)
+        public GaugeInfo(EV23K ev, ref Logs.DebugLog _log)
         {
+            log = _log;
+            readDeviceMutex = new LogMutex("readDeviceMutex", ref log, false);
+
             fValidInfo = false;
 
             EV23KBoard = ev;
@@ -438,6 +446,8 @@ namespace BQEV23K
             {
                 cancelSource.Dispose();
                 EV23KBoard.Dispose();
+
+                readDeviceMutex.Close();
             }
         }
 
@@ -467,18 +477,28 @@ namespace BQEV23K
         private void ReadGaugeData(object _ct)
         {
             var ct = (CancellationToken)_ct;
+            EV23KError err = EV23KError.NoError;
+            Stopwatch elapsedTime = new Stopwatch();
 
+            log.Debug($"ReadGaugeData.Begin");
             try
             {
+                elapsedTime.Start();
                 // -- Single read
                 foreach (var cmd in singleReadGaugeDataRegisters)
                 {
-                    if (ReadDevice(cmd) != EV23KError.NoError)
+                    if ( (err = ReadDevice(cmd)) != EV23KError.NoError)
+                    {
                         hasSMBusError = true;
+                        log.Debug($"ReadDevice{cmd} error = {err}]");
+                    }
                 }
                 // -- Cycle read
                 do
                 {
+                    elapsedTime.Restart();
+
+                    log.Debug($"ReadGaugeData.Start");
                     if (!EV23KBoard.IsPresent)
                     {
                         hasEV23KError = true;
@@ -493,13 +513,16 @@ namespace BQEV23K
 
                     hasSMBusError = false;
 
-                    readDeviceMutex.WaitOne();
+                    readDeviceMutex.WaitOne($"ReadGaugeData()");
 
                     ReadDataflash();
                     foreach (string cmd in cyclicReadGaugeDataRegisters)
                     {
                         if (ReadDevice(cmd) != EV23KError.NoError)
+                        {
+                            log.Debug($"ReadDevice{cmd} error = {err}]");
                             hasSMBusError = true;
+                        }
                     }
 
                     voltage = (int)GetReadValue("Voltage");
@@ -515,13 +538,24 @@ namespace BQEV23K
 
                     fValidInfo = true;
 
+                    log.Debug($"ReadGaugeData.End");
+                    // -- Check elapsed time
+                    if (elapsedTime.Elapsed.TotalSeconds > 5)
+                    {
+                        if ((err = EV23KBoard.ReCconnect()) != EV23KError.NoError)
+                        {
+                            log.Debug($"EV23KBoard.ReConnect() err = {err} {log.__FL__()}");
+                        }
+                    }
+
                     Task.Delay(GaugeDataPollingInterval, ct).Wait();
                 } while (!ct.IsCancellationRequested);
             }
-            catch (Exception)
+            catch (Exception exc)
             {
                 { }
             }
+            log.Debug($"ReadGaugeData.End");
         }
 
         /// <summary>
@@ -535,6 +569,8 @@ namespace BQEV23K
             short dataWord = 0;
             object dataBlock = null;
             short dataLength = 0;
+
+            log.Debug($"ReadDevice({caption}).Begin {log.__FL__()}");
 
             SbsRegisterItem i = sbsItems.SbsRegister.Find(x => x.Caption == caption);
             if(i != null)
@@ -550,7 +586,7 @@ namespace BQEV23K
                     }
                     else
                     {
-
+                        log.Debug($"ReadSMBusWord({i.Command},{dataWord},{sbsItems.TargetAdress}) error = {err} [{log.__FL__()}]");
                     }
                 }
                 else if (i.ReadStyle == 2)
@@ -566,7 +602,7 @@ namespace BQEV23K
                         }
                         else
                         {
-
+                            log.Debug($"ReadSMBusBlock({i.Command},{dataBlock},{dataLength},{sbsItems.TargetAdress}) error = {err} [{log.__FL__()}]");
                         }
                     }
                     else
@@ -580,7 +616,7 @@ namespace BQEV23K
                         }
                         else
                         {
-
+                            log.Debug($"ReadManufacturerAccessBlock({sbsItems.TargetMacAdress},{i.Command},{dataBlock},{dataLength},{sbsItems.TargetAdress}) error = {err} [{log.__FL__()}]");
                         }
                     }
                 }
@@ -595,14 +631,18 @@ namespace BQEV23K
                     }
                     else
                     {
-
+                        log.Debug($"ReadManufacturerAccessBlock({sbsItems.TargetMacAdress},{i.Command},{dataBlock},{dataLength},{sbsItems.TargetAdress}) error = {err} [{log.__FL__()}]");
                     }
                 }
             }
 
             if (err != EV23KError.NoError)
             {
-
+                log.Debug($"ReadDevice({caption}).End err = {err} {log.__FL__()}");
+            }
+            else
+            {
+                log.Debug($"ReadDevice({caption}).End {log.__FL__()}");
             }
 
             return err;
@@ -661,6 +701,11 @@ namespace BQEV23K
                 {
                     bcfgItems.CreateDataflashModel(dataBlock, dataLength);
                     isDataflashAvail = true;
+                }
+                else
+                {
+                    log.Debug($"ReadDataflash()." +
+                        $"ReadDataflash({sbsItems.TargetMacAdress}, {dataBlock.ToString()}, {dataLength}, {sbsItems.TargetAdress}) error = {err}]");
                 }
             }
             return;

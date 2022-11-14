@@ -42,6 +42,7 @@ namespace BQEV23K
         private CycleModeType selectedCycleModeType = CycleModeType.None;
         private GpcDataLog gpcLog;
         private DataLog_t DataLog;
+        Logs.DebugLog log;
 
         /// <summary>
         /// Constructor.
@@ -52,9 +53,11 @@ namespace BQEV23K
             plot = new PlotViewModel();
             DataContext = plot;
 
-            Title = @"BQEV2400 - v2.5.0.0 by ""ООО ВЗОР"" /Mictronics";
+            log = new Logs.DebugLog();
+
+            Title = @"BQEV2400 - v2.5.1.0 by ""ООО ВЗОР"" /Mictronics";
             System.Windows.Forms.Integration.WindowsFormsHost host;
-            board = new EV23K(out host);
+            board = new EV23K(out host, ref log);
             host.Width = host.Height = 0;
             host.IsEnabled = false;
             MainGrid.Children.Add(host);
@@ -100,7 +103,7 @@ namespace BQEV23K
                 Console.WriteLine(BrdsName);
 
                 EV23KError err = board.CheckForError();
-                gauge = new GaugeInfo(board);
+                gauge = new GaugeInfo(board, ref log);
 
                 UpdateGui(null, null);
             }
@@ -129,7 +132,7 @@ namespace BQEV23K
 
             if(gauge != null)
             {
-                gauge.ReadDeviceMutex.WaitOne();
+                gauge.ReadDeviceMutex.WaitOne($"MainWindow_Closing() {log.__FL__()}");
                 gauge.StopPolling();
                 gauge.ReadDeviceMutex.ReleaseMutex();
             }
@@ -188,6 +191,11 @@ namespace BQEV23K
                     DataLog.Dispose();
                 }
                 board.Dispose();
+
+                ctUpdatePlot.Dispose();
+                ctDataLog.Dispose();
+                ctConnectionM5010.Dispose();
+                log.Dispose();
             }
         }
 
@@ -215,7 +223,7 @@ namespace BQEV23K
                 {
                     if (gauge != null)
                     {
-                        gauge.ReadDeviceMutex.WaitOne();
+                        gauge.ReadDeviceMutex.WaitOne($"UpdateGui() {log.__FL__()}");
                         gauge.StopPolling();
                         gauge.ReadDeviceMutex.ReleaseMutex();
                         gauge.Dispose();
@@ -260,7 +268,7 @@ namespace BQEV23K
                     ReconnectBoard_StopWatch.Restart();
 
                     System.Windows.Forms.Integration.WindowsFormsHost host;
-                    board = new EV23K(out host);
+                    board = new EV23K(out host, ref log);
 
                     try
                     {
@@ -274,7 +282,7 @@ namespace BQEV23K
                         Console.WriteLine(BrdsName);
 
                         EV23KError err = board.CheckForError();
-                        gauge = new GaugeInfo(board);
+                        gauge = new GaugeInfo(board, ref log);
 
                         if (cycle.CycleInProgress)
                         {
@@ -414,7 +422,7 @@ namespace BQEV23K
 
                     if (gauge != null)
                     {
-                        gauge.ReadDeviceMutex.WaitOne();
+                        gauge.ReadDeviceMutex.WaitOne($"UpdatePlot() {log.__FL__()}");
                         var Voltage = gauge.Voltage;
                         var Current = gauge.Current;
                         var Temperature = gauge.Temperature;
@@ -472,7 +480,7 @@ namespace BQEV23K
         }
         void LogAddEvent()
         {
-            DataLog = new DataLog_t(gauge, $"{CycleType.ProductionCycle}");
+            DataLog = new DataLog_t(gauge, $"{CycleType.ProductionCycle}", ref log);
             if(gauge != null)
                 gauge.LogWriteEvent += DataLog.WriteMessage;
             if (LogView != null)
@@ -679,10 +687,16 @@ namespace BQEV23K
                 for(int i = 0; i < int.Parse(CycleRepetitions.Text); i++)
                 {
                     tl.AddRange( new List<GenericTask> {
+                            // -- @TO_DO: Work
                             new DischargeTask(termVoltage, termVoltageCell),
-                            new RelaxTask(relaxTimeDischarge, true),
+                            new RelaxTask(relaxTimeDischarge),
                             new ChargeTask(taperCurrent),
-                            new RelaxTask(relaxTimeCharge, true),
+                            new RelaxTask(relaxTimeCharge),
+                            // -- Debug
+                            //new ChargeTask(taperCurrent),
+                            //new RelaxTask(relaxTimeCharge),
+                            //new DischargeTask( new TimeSpan( 0,1,0) ),
+                            //new RelaxTask(relaxTimeDischarge, true),
                     } );
                 }
             }
@@ -728,7 +742,7 @@ namespace BQEV23K
                     new RelaxTask(relaxTimeDischarge, true),
                 };
 
-                gpcLog = new GpcDataLog(cellCount);
+                gpcLog = new GpcDataLog(cellCount, ref log);
             }
 
             cycle = new Cycle(tl, gauge, Mark5010);

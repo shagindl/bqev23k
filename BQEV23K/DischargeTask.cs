@@ -16,6 +16,7 @@ namespace BQEV23K
         private double currentDeisharge = -1, current;
         private bool isCompleted = false;
         private DateTime startTime;
+        private DateTime time_end;
         private double LStatus_complite = -1;
 
         #region Properties
@@ -71,9 +72,17 @@ namespace BQEV23K
 
             Init(tv, tvCell);
         }
+        public DischargeTask(TimeSpan time)
+        {
+            currentDeisharge = 4.0;
+            LStatus_complite = -1;
+
+            Init(9000, 2200);
+            time_end = DateTime.Now + time;
+        }
         private void Init(int tv, int tvCell)
         {
-            startTime = DateTime.Now;
+            time_end = startTime = DateTime.Now;
             terminateVoltage = tv;
             termVoltageCell = tvCell;
             current = -1.0;
@@ -107,6 +116,10 @@ namespace BQEV23K
                         isCompleted = true;
                     }
                     if(LStatus_complite >= 0 && LStatus_complite == gaugeInfo.GetReadValue("LStatus"))
+                    {
+                        isCompleted = true;
+                    }
+                    if(time_end > startTime && DateTime.Now > time_end)
                     {
                         isCompleted = true;
                     }

@@ -8,20 +8,22 @@ namespace BQEV23K
     /// <summary>
     /// This class creates a new data log for GPC cycle.
     /// </summary>
-    public class GpcDataLog
+    public class GpcDataLog : IDisposable
     {
         private DateTime startTime;
         System.IO.StreamWriter writer_gpc;
-        private System.Threading.Mutex Mutex = new System.Threading.Mutex();
+        private LogMutex Mutex;
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="cellCount">Configured battery cell count.</param>
-        public GpcDataLog(int cellCount)
+        public GpcDataLog(int cellCount, ref Logs.DebugLog _log)
         {
+            Mutex = new LogMutex("GpcDataLog.Mutex", ref _log);
+
             startTime = DateTime.Now;
-            Mutex.WaitOne();
+            Mutex.WaitOne($"GpcDataLog()");
             try
             {
                 if(!Directory.Exists("GPC Results"))
@@ -56,6 +58,10 @@ namespace BQEV23K
             }
             Mutex.ReleaseMutex();
         }
+        ~GpcDataLog()
+        {
+            Dispose(false);
+        }
         public void Dispose()
         {
             Dispose(true);
@@ -71,7 +77,7 @@ namespace BQEV23K
                     writer_gpc.Close();
                     writer_gpc = null;
                 }
-                Mutex.Dispose();
+                Mutex.Close();
             }
         }
 
@@ -85,7 +91,7 @@ namespace BQEV23K
         {
             await Task.Run(() =>
             {
-                Mutex.WaitOne();
+                Mutex.WaitOne($"WriteLine()");
                 try
                 {
                     if(writer_gpc != null)

@@ -315,7 +315,7 @@ namespace BQEV23K
                                 if (!stop_watch.IsRunning)
                                 {
                                     gauge.ToggleChargerRelay(true, true);
-                                    gauge.ToggleLoadRelay(false);
+                                    gauge.ToggleLoadRelay(taskList[currentTask].IsLoadRelay());
                                     pushLoadStartButton = true;
                                     stop_watch.Start();
                                 }

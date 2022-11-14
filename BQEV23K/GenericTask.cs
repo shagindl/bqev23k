@@ -73,5 +73,9 @@ namespace BQEV23K
         {
 
         }
+        virtual public bool IsLoadRelay()
+        {
+            return false;
+        }
     }
 }

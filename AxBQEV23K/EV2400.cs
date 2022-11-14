@@ -43,7 +43,7 @@ class bq80xrw
         public static extern short OpenDeviceA(IntPtr DevName);
 
         [DllImport("bq80xrw.dll", EntryPoint = "CloseDeviceA", CharSet = CharSet.Auto, CallingConvention = CallingConvention.Cdecl)]
-        public static extern short CloseDevice();
+        public static extern short CloseDeviceA();
 
         //public static extern void GetAllFreeBoards(int nNumBrdsToGet, ref int nNumBrds, ref string ListBrdNames, int bufferLength);
         //public static extern void GetAllFreeBoards(
@@ -200,7 +200,7 @@ class bq80xrw
 
         public short CloseDevice()
         {
-            return bq80xrw.CloseDevice();
+            return bq80xrw.CloseDeviceA();
         }
 
         public void GetFreeBoards(int nNumBrdsToGet, ref int nNumBrds, ref string ListBrdNames)

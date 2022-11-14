@@ -13,13 +13,14 @@ namespace BQEV23K
     {
         private DateTime startTime;
         private string NameFile, NameGpcFile;
-        private System.Threading.Mutex Mutex = new System.Threading.Mutex();
-        //System.IO.StreamWriter writer, writer_gpc;
+        private LogMutex Mutex;
+        System.IO.StreamWriter writer, writer_gpc;
         List<string> lst_param = new List<string>{
             "Temperature",
             "Voltage", "Cell 1 Voltage", "Cell 2 Voltage","Cell 3 Voltage","Cell 4 Voltage",
             "Current",
             "Relative State of Charge", "Absolute State of Charge",
+            "Remaining Capacity", "Full charge Capacity",
             "Run time To Empty","Average Time to Empty", "Average Time to Full", "Charging Current", "Charging Voltage",
             "QMax Passed Q","QMax Time",
             "DOD0 Passed Q","DOD0 Passed E","DOD0 Time",
@@ -41,10 +42,12 @@ namespace BQEV23K
         /// <summary>
         /// Constructor
         /// </summary>
-        public DataLog_t(GaugeInfo gauge, string cycle_type)
+        public DataLog_t(GaugeInfo gauge, string cycle_type, ref Logs.DebugLog log)
         {
+            Mutex = new LogMutex("DataLog.Mutex", ref log);
+
             startTime = DateTime.Now;
-            Mutex.WaitOne();
+            Mutex.WaitOne($"DataLog_t() {log.__FL__()}");
             try
             {
                 if(!Directory.Exists("Logs"))
@@ -70,12 +73,19 @@ namespace BQEV23K
                 heads = heads.Remove(heads.Length - 1);
                 heads_gpc = heads_gpc.Remove(heads_gpc.Length - 1);
 
-                using (StreamWriter writer = new System.IO.StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
+                FileStream fs1 = File.Open($@"Logs\{ NameFile }", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
+                BufferedStream bs1 = new BufferedStream(fs1);
+                writer = new System.IO.StreamWriter(bs1, System.Text.Encoding.UTF8);
+                writer.AutoFlush = false;
                 {
                     writer.WriteLine($"Device Chemistry ID = {ChemID}");
                     writer.WriteLine(heads);
                 }
-                using (StreamWriter writer_gpc = new System.IO.StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
+
+                FileStream fs2 = File.Open($@"Logs\{ NameGpcFile }", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
+                BufferedStream bs2 = new BufferedStream(fs2);
+                writer_gpc = new System.IO.StreamWriter(bs2, System.Text.Encoding.UTF8);
+                writer_gpc.AutoFlush = false;
                 {
                     writer_gpc.WriteLine("ProcessingType=2");
                     writer_gpc.WriteLine("NumCellSeries=4");
@@ -105,20 +115,26 @@ namespace BQEV23K
         {
             if (disposing)
             {
-                Mutex.WaitOne();
-                //if (writer != null)
+                //System.Windows.Application.Current.Dispatcher.BeginInvoke((Action)(() =>
                 //{
-                //    writer.Flush();
-                //    writer.Close();
-                //    writer.Dispose();
-                //}
-                //if (writer_gpc != null)
-                //{
-                //    writer_gpc.Flush();
-                //    writer_gpc.Close();
-                //    writer_gpc.Dispose();
-                //}
-                Mutex.ReleaseMutex();
+                    Mutex.WaitOne($"Dispose()");
+                    if (writer != null)
+                    {
+                        //writer.FlushAsync();
+                        writer.Close();
+                        writer.Dispose();
+                        writer = null;
+                    }
+                    if (writer_gpc != null)
+                    {
+                        //writer_gpc.FlushAsync();
+                        writer_gpc.Close();
+                        writer_gpc.Dispose();
+                        writer_gpc = null; 
+                    }
+                    Mutex.ReleaseMutex();
+                    Mutex.Close();
+                //}));
             }
         }
         /// <summary>
@@ -127,33 +143,37 @@ namespace BQEV23K
         /// 
         public void WriteLine(string info, string item)
         {
-            Task.Run(() =>
-            {
+            //Task.Run(() =>
+            //{
                 string time = DateTime.Now.Subtract(startTime).TotalSeconds.ToString("F1", CultureInfo.CreateSpecificCulture("en-US"));
                 string dts = DateTime.Now.ToString();
 
                 if(item[item.Length - 1] == ',')
                     item = item.Remove(item.Length - 1);
-                item += "\r\n";
+                //item += "\r\n";
 
-                Mutex.WaitOne();
+                Mutex.WaitOne($"WriteLine()");
                 try
                 {
                     
                     if(info == "gauge")
                     {
                         //using (StreamWriter writer_gpc = new StreamWriter($@"Logs\{ NameGpcFile }", true, System.Text.Encoding.UTF8))
+                        if (writer_gpc != null)
                         {
                             //writer_gpc.WriteLineAsync($"{time},{dts},{item}");
-                            File.AppendAllText($@"Logs\{ NameGpcFile }", $"{time},{dts},{item}");
+                            writer_gpc.WriteLine($"{time},{dts},{item}");
+                            //File.AppendAllText($@"Logs\{ NameGpcFile }", $"{time},{dts},{item}");
                         }
                         info += ",";
                     }
                     //using (StreamWriter writer = new StreamWriter($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
                     //using (StreamWriter writer = new File.AppendAllText($@"Logs\{ NameFile }", true, System.Text.Encoding.UTF8))
+                    if (writer != null)
                     {
-                        File.AppendAllText($@"Logs\{ NameFile }", $"{time},{dts},{info}{item}");
+                        //File.AppendAllText($@"Logs\{ NameFile }", $"{time},{dts},{info}{item}");
                         //writer.WriteLineAsync($"{time},{dts},{info}{item}");
+                        writer.WriteLine($"{time},{dts},{info}{item}");
                     }
                 }
                 catch (Exception ex)
@@ -161,12 +181,12 @@ namespace BQEV23K
                     Console.WriteLine(ex.Message);
                 }
                 Mutex.ReleaseMutex();
-            });
+            //});
         }
 
         public void WriteLine(GaugeInfo gauge)
         {
-            gauge.ReadDeviceMutex.WaitOne();
+            gauge.ReadDeviceMutex.WaitOne($"WriteLine()");
             string item = "";
             foreach (var prm in lst_param) {
                 item += $"{ gauge.GetDisplayValue(prm) },";

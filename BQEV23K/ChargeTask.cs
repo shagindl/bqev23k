@@ -11,7 +11,7 @@ namespace BQEV23K
         private const int ChargeStartedCurrentThresholdMilliamps = 30;
         private int taperCurrent, EndHoldTime;
         private bool isCompleted = false;
-        private bool currentHasStarted = false;
+        private bool currentHasStarted = false, fLoadRelay = false;
         private DateTime startTime, HoldTime;
 
         #region Properties
@@ -53,12 +53,13 @@ namespace BQEV23K
         /// Constructor
         /// </summary>
         /// <param name="tc">Taper current to end task, in [mA].</param>
-        public ChargeTask(int tc, int end_hold_time = 0)
+        public ChargeTask(int tc, bool _fLoadRelay = false, int end_hold_time = 0)
         {
             startTime = DateTime.Now;
             taperCurrent = tc;
             EndHoldTime = end_hold_time;
             HoldTime = startTime;
+            fLoadRelay = _fLoadRelay;
         }
 
         /// <summary>
@@ -70,6 +71,10 @@ namespace BQEV23K
             startTime = DateTime.Now;
             isCompleted = false;
             return true;
+        }
+        override public bool IsLoadRelay()
+        {
+            return fLoadRelay;
         }
 
         /// <summary>
