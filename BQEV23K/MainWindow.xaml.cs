@@ -550,7 +550,7 @@ namespace BQEV23K
             /* See TI SLUA848, chapter 4.2.1 */
             LogView.AddEntry("Preparing...");
             bool FlagFET_EN_valid = false;
-            if (selectedCycleType == CycleType.DischargeChargeTask)
+            if (selectedCycleType == CycleType.DischargeChargeTask || selectedCycleType == CycleType.CustomCycle)
                 FlagFET_EN_valid = true;
             else
                 FlagFET_EN_valid = false;
@@ -568,6 +568,9 @@ namespace BQEV23K
             }
             // --
             if (selectedCycleType == CycleType.DischargeChargeTask)
+            {
+
+            }else if (selectedCycleType == CycleType.CustomCycle)
             {
 
             }
@@ -633,7 +636,7 @@ namespace BQEV23K
                 return;
             }
 
-            if (selectedCycleType != CycleType.DischargeChargeTask)
+            if (selectedCycleType != CycleType.DischargeChargeTask && selectedCycleType != CycleType.CustomCycle)
             {
                 if (gauge.FlagDSG == false)
                     gauge.CommandToggleDischargeFET();
@@ -700,6 +703,15 @@ namespace BQEV23K
                     } );
                 }
             }
+            else if (selectedCycleType == CycleType.CustomCycle)
+            {
+                for (int i = 0; i < int.Parse(CycleRepetitions.Text); i++)
+                {
+                    tl.AddRange(new List<GenericTask> {
+                            new CustomTask(),
+                    });
+                }
+            }
             else if (selectedCycleType == CycleType.ProductionCycle)
             {
                 tl = new List<GenericTask> {
@@ -747,7 +759,7 @@ namespace BQEV23K
 
             cycle = new Cycle(tl, gauge, Mark5010);
             cycle.CycleModeType = selectedCycleModeType;
-            cycle.LogWriteEvent += LogView.AddEntry;
+            cycle.LogViewEvent += LogView.AddEntry;
             cycle.CycleCompleted += OnCycleCompleted;
             cycle.StartCycle();
 
@@ -882,6 +894,9 @@ namespace BQEV23K
                 case CycleType.GpcCycle:
                     TabItemCycle.Header = "GPC Cycle";
                     break;
+                case CycleType.CustomCycle:
+                    TabItemCycle.Header = "Custom Cycle";
+                    break;
                 default:
                     TabItemCycle.Header = "selectedCycleType not defined.";
                     return;
@@ -918,6 +933,10 @@ namespace BQEV23K
             else if (rb.Name == "ModeProductionCycle")
             {
                 selectedCycleType = CycleType.ProductionCycle;
+            }
+            else if (rb.Name == "CustomCycle")
+            {
+                selectedCycleType = CycleType.CustomCycle;
             }
             else
             {

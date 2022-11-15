@@ -73,6 +73,13 @@
                             <RadioButton x:Name="ModeDischargeChargeCycle" Content="DischargeCharge" Checked="CycleTypeSelected"/>
                             <RadioButton Name="ModeLearningCycle" Content="Learning Cycle" Checked="CycleTypeSelected"/>
                             <RadioButton Name="ModeGpcCycle" Content="GPC Cycle" Checked="CycleTypeSelected"/>
+                            <RadioButton Name="CustomCycle" Checked="CycleTypeSelected">
+                                <RadioButton.Content>
+                                    <TextBlock>
+                                        Custom Cycle <LineBreak/> CustomTask.json
+                                    </TextBlock>
+                                </RadioButton.Content>
+                            </RadioButton>
                         </StackPanel>
                     </GroupBox>
                     <GroupBox Header="Manual Mode" Width="392">

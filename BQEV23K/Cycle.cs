@@ -15,7 +15,8 @@ namespace BQEV23K
         LearningCycle,
         GpcCycle,
         ProductionCycle,
-        DischargeChargeTask
+        DischargeChargeTask,
+        CustomCycle
     }
 
     /// <summary>
@@ -64,8 +65,8 @@ namespace BQEV23K
 
         private Stopwatch stop_watch;
 
-        public delegate void LogWriteDelegate(object sender, LogWriteEventArgs e);
-        public event LogWriteDelegate LogWriteEvent;
+        public delegate void LogViewDelegate(object sender, LogWriteEventArgs e);
+        public event LogViewDelegate LogViewEvent;
 
         public event EventHandler CycleCompleted;
         protected virtual void OnCycleCompleted(EventArgs e)
@@ -161,13 +162,17 @@ namespace BQEV23K
             gauge = _gauge;
         }
 
-            /// <summary>
-            /// Write new string to LogViewer control.
-            /// </summary>
-            /// <param name="log">String to write.</param>
-            private void LogWrite(string log)
+        /// <summary>
+        /// Write new string to LogViewer control.
+        /// </summary>
+        /// <param name="log">String to write.</param>
+        private void LogViewer(string log)
         {
-            LogWriteEvent?.Invoke(this, new LogWriteEventArgs(log));
+            LogViewEvent?.Invoke(this, new LogWriteEventArgs(log));
+        }
+        public void AddLogView(object sender, LogWriteEventArgs e)
+        {
+            LogViewer(e.Message);
         }
 
         /// <summary>
@@ -180,19 +185,20 @@ namespace BQEV23K
 
             if (taskList == null || taskList.Count == 0)
             {
-                LogWrite("No task to run!");
+                LogViewer("No task to run!");
                 return false;
             }
             
             cancelSource = new CancellationTokenSource();
             cancelToken = cancelSource.Token;
 
-            LogWrite("Learning cycle started...");
+            LogViewer("Learning cycle started...");
             currentTask = 0;
 
             GenericTask task = taskList[currentTask];
             taskType = task.GetType();
-            LogWrite("Start task " + task.Description);
+            task.LogViewEvent += AddLogView;
+            LogViewer("Start task " + task.Description);
             try
             {
                 cycleInProgress = task.InitializeTask();
@@ -204,7 +210,7 @@ namespace BQEV23K
                 return cycleInProgress;
             } catch (Exception ex)
             {
-                LogWrite("Error processing task. Details: " + ex.Message);
+                LogViewer("Error processing task. Details: " + ex.Message);
                 return false;
             }
         }
@@ -216,7 +222,6 @@ namespace BQEV23K
         {
             cycleTimer = new Timer(processCycle, null, ProcessTimerPeriodms, ProcessTimerPeriodms);
         }
-
         /// <summary>
         /// Stop cycle processing timer.
         /// </summary>
@@ -237,7 +242,7 @@ namespace BQEV23K
             gauge.ToggleLoadRelay(false);
             pushLoadStartButton = true;
             cycleInProgress = false;
-            LogWrite("Learning cycle cancelled.");
+            LogViewer("Learning cycle cancelled.");
         }
 
         /// <summary>
@@ -250,7 +255,7 @@ namespace BQEV23K
             gauge.ToggleLoadRelay(false);
             pushLoadStartButton = true;
             cycleInProgress = false;
-            LogWrite("Learning cycle complete.");
+            LogViewer("Learning cycle complete.");
         }
 
         /// <summary>
@@ -279,9 +284,10 @@ namespace BQEV23K
                     GenericTask t = taskList[currentTask];
                     if (t.IsTaskComplete(gauge))
                     {
-                        LogWrite("End task: " + t.Name + " completed in " + DateTime.Now.Subtract(t.StartTime).ToString(@"hh\:mm\:ss"));
-                        LogWrite("LStatus: " + gauge.GetDisplayValue("LStatus"));
+                        LogViewer("End task: " + t.Name + " completed in " + DateTime.Now.Subtract(t.StartTime).ToString(@"hh\:mm\:ss"));
+                        LogViewer("LStatus: " + gauge.GetDisplayValue("LStatus"));
 
+                        taskList[currentTask].LogViewEvent -= AddLogView;
                         currentTask += 1;
                         if(currentTask >= taskList.Count)
                         {   // Entire cycle completed
@@ -291,15 +297,16 @@ namespace BQEV23K
                             return false;
                         }
                         GenericTask task = taskList[currentTask];
+                        task.LogViewEvent += AddLogView;
                         taskType = task.GetType();
-                        LogWrite("Start task " + task.Description);
+                        LogViewer("Start task " + task.Description);
 
                         if (taskType.Name == "RelaxTask")
-                            LogWrite("Relaxing...Please wait...");
+                            LogViewer("Relaxing...Please wait...");
 
                         cycleInProgress = task.InitializeTask();
                         if (!cycleInProgress)
-                            LogWrite("Error processing task.");
+                            LogViewer("Error processing task.");
                     } 
                     else if(taskType.Name == "ChargeTask")
                     {
@@ -307,7 +314,7 @@ namespace BQEV23K
                         {
                             if (cycleModeType == BQEV23K.CycleModeType.Manual)
                             {
-                                LogWrite("Charge Mode - Connect charger or power supply now.");
+                                LogViewer("Charge Mode - Connect charger or power supply now.");
                             }
                             else
                             {
@@ -339,7 +346,7 @@ namespace BQEV23K
                         {
                             if (cycleModeType == BQEV23K.CycleModeType.Manual)
                             {
-                                LogWrite("Discharge Mode - Connect load now.");
+                                LogViewer("Discharge Mode - Connect load now.");
                             }
                             else
                             {

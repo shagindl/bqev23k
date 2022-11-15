@@ -1,0 +1,21 @@
+{
+  "ListTasks": [
+    {
+      "Name": "DischargeTask_1",
+      "Mode": "DischargeTask",
+      "RSOC": 20
+    },
+    {
+      "Name": "PauseTask_1",
+      "Mode": "PauseTask",
+      "Pause": 60
+    },
+    {
+      "Name": "ChargeTask_1",
+      "Mode": "ChargeTask",
+      "terminateVoltage": 10000,
+      "termVoltageCell": 2300
+      "taperCurrent": 600
+    }
+  ]
+}

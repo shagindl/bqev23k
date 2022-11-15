@@ -15,6 +15,9 @@ namespace BQEV23K
         private string name = "Task";
         private string description = "Generic Task";
 
+        public delegate void LogViewDelegate(object sender, LogWriteEventArgs e);
+        public event LogViewDelegate LogViewEvent;
+
         #region Properties
         /// <summary>
         /// Get start time of task.
@@ -76,6 +79,10 @@ namespace BQEV23K
         virtual public bool IsLoadRelay()
         {
             return false;
+        }
+        public void LogView(string m)
+        {
+            LogViewEvent?.Invoke(this, new LogWriteEventArgs(m));
         }
     }
 }

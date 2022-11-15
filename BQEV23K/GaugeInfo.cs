@@ -391,6 +391,13 @@ namespace BQEV23K
                 return bcfgItems.DataflashItems.Find(x => x.Caption == "Design Capacity mAh").RawValue.ToString();
             }
         }
+        public int RSOC
+        {
+            get
+            {
+                return (int)GetReadValue("Relative State of Charge");
+            }
+        }
 
         public ref LogMutex ReadDeviceMutex
         {
@@ -540,13 +547,13 @@ namespace BQEV23K
 
                     log.Debug($"ReadGaugeData.End");
                     // -- Check elapsed time
-                    if (elapsedTime.Elapsed.TotalSeconds > 5)
-                    {
-                        if ((err = EV23KBoard.ReCconnect()) != EV23KError.NoError)
-                        {
-                            log.Debug($"EV23KBoard.ReConnect() err = {err} {log.__FL__()}");
-                        }
-                    }
+                    //if (elapsedTime.Elapsed.TotalSeconds > 5)
+                    //{
+                    //    if ((err = EV23KBoard.ReCconnect()) != EV23KError.NoError)
+                    //    {
+                    //        log.Debug($"EV23KBoard.ReConnect() err = {err} {log.__FL__()}");
+                    //    }
+                    //}
 
                     Task.Delay(GaugeDataPollingInterval, ct).Wait();
                 } while (!ct.IsCancellationRequested);
